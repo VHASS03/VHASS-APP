@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/colors.dart';
 import '../home/home.dart';
-
+import 'signup.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -133,7 +133,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (!_isOtpSent) ...[
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () { /* Navigate to Sign Up */ },
+                     // Inside LoginScreen.dart
+
+  onPressed: () { 
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpScreen()));
+  },
+
                       child: RichText(
                         text: const TextSpan(
                           style: TextStyle(color: Colors.white70),
