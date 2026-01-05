@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../theme_controller.dart'; // Ensure this path is correct
+import '../../theme_controller.dart'; 
+import 'safety_device.dart';
 
+// --- ADDED THIS CLASS: The missing parent widget ---
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -11,24 +13,46 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    // Detect theme state
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      // Background color automatically switches based on appTheme
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Settings"),
-        // The AppBarTheme in main.dart will handle the text/icon color
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildSectionHeader("PROFILE"),
+            _buildSettingCard(
+              title: "Your Profile",
+              subtitle: "+91 98765 43210",
+              icon: Icons.person_outline,
+              onTap: () {
+                // Navigate to Profile Screen if you have one
+              },
+            ),
+
+            _buildSectionHeader("SAFETY"),
+            _buildSettingCard(
+              title: "Safety Device",
+              subtitle: "Coming soon",
+              icon: Icons.bluetooth_searching,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SafetyDeviceScreen()),
+                );
+              },
+            ),
+
             _buildSectionHeader("PREFERENCES"),
-            
-            // --- DARK MODE CARD ---
             _buildSettingCard(
               title: "Dark Mode",
               icon: isDark ? Icons.dark_mode : Icons.light_mode,
@@ -36,86 +60,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: isDark,
                 activeColor: const Color(0xFF9146FF),
                 onChanged: (bool value) {
-                  // Trigger global theme change
+                  // Ensure themeNotifier is defined in your theme_controller.dart
                   themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
                 },
               ),
             ),
-            
             const SizedBox(height: 12),
-            
             _buildSettingCard(
               title: "Notifications",
               icon: Icons.notifications_none,
             ),
-            
+
             _buildSectionHeader("SUPPORT"),
-            
             _buildSettingCard(
               title: "Help & FAQs",
               icon: Icons.help_outline,
             ),
+
+            const SizedBox(height: 32),
+            _buildLogoutButton(),
+            const SizedBox(height: 24),
+            _buildFooter(),
           ],
         ),
       ),
     );
   }
 
-  // Helper for Section Headers
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 10),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.grey,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
+  Widget _buildSettingCard({
+    required String title,
+    String? subtitle,
+    required IconData icon,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF9146FF)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                ],
+              ),
+            ),
+            trailing ?? const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+          ],
         ),
       ),
     );
   }
 
-  // --- FIXED BUILDER METHOD ---
-  Widget _buildSettingCard({
-    required String title,
-    required IconData icon,
-    Widget? trailing,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        // Uses the cardColor defined in your appTheme (Dark = greyish, Light = white)
-        color: Theme.of(context).cardColor, 
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.grey, 
+          fontSize: 11, 
+          fontWeight: FontWeight.bold, 
+          letterSpacing: 1.2
         ),
-        boxShadow: [
-          if (Theme.of(context).brightness == Brightness.light)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-        ],
       ),
-      child: Row(
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return InkWell(
+      onTap: () {
+        // Implement Logout logic
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.red.withOpacity(0.5)),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.logout, color: Colors.red),
+            SizedBox(width: 12),
+            Text("Logout", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return const Center(
+      child: Column(
         children: [
-          Icon(icon, color: const Color(0xFF9146FF)),
-          const SizedBox(width: 16),
-          Text(
-            title,
-            style: TextStyle(
-              // IMPORTANT: This pulls from your textTheme in main.dart
-              // It will automatically be black in light mode and white in dark mode.
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-          const Spacer(),
-          trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
+          Text("VHASS v1.0.0", style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Text("Made with care for your safety", style: TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
     );
