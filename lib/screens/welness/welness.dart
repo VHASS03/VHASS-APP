@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:my_app/core/services/storage_service.dart';
+import 'package:my_app/core/services/wellness_service.dart';
 
 class WellnessScreen extends StatefulWidget {
   const WellnessScreen({super.key});
@@ -10,15 +12,80 @@ class WellnessScreen extends StatefulWidget {
 
 class _WellnessScreenState extends State<WellnessScreen> {
   // --- STATE VARIABLES ---
-  // Defaulting to 2 days ago so the Daily Tracker is visible immediately for testing
+  late String _userId;
   DateTime _lastPeriodDate = DateTime.now().subtract(const Duration(days: 2));
   int _cycleLength = 28;
   int _periodLength = 5;
-  final List<Map<String, dynamic>> _healthNotes = [];
+  List<Map<String, dynamic>> _healthNotes = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWellnessData();
+  }
+
+  /// Load wellness data for current user from persistent storage
+  Future<void> _loadWellnessData() async {
+    try {
+      _userId = await StorageService.getUserId() ?? '';
+      if (_userId.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: User not found')),
+          );
+        }
+        return;
+      }
+
+      final wellnessData = await WellnessService.loadUserWellnessData(_userId);
+
+      if (mounted) {
+        setState(() {
+          _lastPeriodDate = wellnessData['lastPeriodDate'] as DateTime;
+          _cycleLength = wellnessData['cycleLength'] as int;
+          _periodLength = wellnessData['periodLength'] as int;
+          _healthNotes = List<Map<String, dynamic>>.from(
+            wellnessData['healthNotes'] as List<dynamic>,
+          );
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading wellness data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading wellness data: $e')),
+        );
+      }
+    }
+  }
+
+  /// Save current wellness state to persistent storage
+  Future<void> _saveWellnessData() async {
+    try {
+      await WellnessService.saveAllWellnessData(
+        _userId,
+        _lastPeriodDate,
+        _cycleLength,
+        _periodLength,
+        _healthNotes,
+      );
+    } catch (e) {
+      print('❌ Error saving wellness data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving wellness data: $e')),
+        );
+      }
+    }
+  }
 
   // --- LOGIC CALCULATIONS ---
-  DateTime get _nextPeriodDate => _lastPeriodDate.add(Duration(days: _cycleLength));
-  
+  DateTime get _nextPeriodDate =>
+      _lastPeriodDate.add(Duration(days: _cycleLength));
+
   int get _daysUntilNextPeriod {
     final diff = _nextPeriodDate.difference(DateTime.now()).inDays;
     return diff < 0 ? 0 : diff;
@@ -28,7 +95,13 @@ class _WellnessScreenState extends State<WellnessScreen> {
     final today = DateTime.now();
     // Calculate difference in days (ignoring time)
     final difference = DateTime(today.year, today.month, today.day)
-        .difference(DateTime(_lastPeriodDate.year, _lastPeriodDate.month, _lastPeriodDate.day))
+        .difference(
+          DateTime(
+            _lastPeriodDate.year,
+            _lastPeriodDate.month,
+            _lastPeriodDate.day,
+          ),
+        )
         .inDays;
     return difference >= 0 && difference < _periodLength;
   }
@@ -36,8 +109,15 @@ class _WellnessScreenState extends State<WellnessScreen> {
   int get _currentPeriodDay {
     final today = DateTime.now();
     return DateTime(today.year, today.month, today.day)
-        .difference(DateTime(_lastPeriodDate.year, _lastPeriodDate.month, _lastPeriodDate.day))
-        .inDays + 1;
+            .difference(
+              DateTime(
+                _lastPeriodDate.year,
+                _lastPeriodDate.month,
+                _lastPeriodDate.day,
+              ),
+            )
+            .inDays +
+        1;
   }
 
   // --- INTERACTION METHODS ---
@@ -61,6 +141,12 @@ class _WellnessScreenState extends State<WellnessScreen> {
     );
     if (picked != null) {
       setState(() => _lastPeriodDate = picked);
+      await _saveWellnessData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Last period date updated')),
+        );
+      }
     }
   }
 
@@ -70,17 +156,25 @@ class _WellnessScreenState extends State<WellnessScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).cardColor,
-        title: Text("Log Health Note", style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+        title: Text(
+          "Log Health Note",
+          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+        ),
         content: TextField(
           controller: noteController,
           style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-          decoration: const InputDecoration(hintText: "Mood, symptoms, or pain level..."),
+          decoration: const InputDecoration(
+            hintText: "Mood, symptoms, or pain level...",
+          ),
           maxLines: 3,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (noteController.text.isNotEmpty) {
                 setState(() {
                   _healthNotes.insert(0, {
@@ -88,8 +182,14 @@ class _WellnessScreenState extends State<WellnessScreen> {
                     'note': noteController.text,
                   });
                 });
+                _saveWellnessData();
               }
-              Navigator.pop(context);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('✅ Note saved')));
+              }
             },
             child: const Text("Save"),
           ),
@@ -104,6 +204,26 @@ class _WellnessScreenState extends State<WellnessScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final textColor = theme.textTheme.bodyLarge?.color;
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: false,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: textColor),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            'Women Wellness',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -114,15 +234,17 @@ class _WellnessScreenState extends State<WellnessScreen> {
           icon: Icon(Icons.arrow_back, color: textColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Women Wellness', 
-            style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Women Wellness',
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           children: [
             const SizedBox(height: 20),
-            
+
             // --- 1. PREDICTION DASHBOARD ---
             Container(
               width: double.infinity,
@@ -135,7 +257,11 @@ class _WellnessScreenState extends State<WellnessScreen> {
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: const Color(0xFF9146FF).withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))
+                  BoxShadow(
+                    color: const Color(0xFF9146FF).withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
                 ],
               ),
               child: Column(
@@ -146,24 +272,46 @@ class _WellnessScreenState extends State<WellnessScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(_isCurrentlyOnPeriod ? 'Current Status' : 'Next Period In', 
-                              style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                          Text(
+                            _isCurrentlyOnPeriod
+                                ? 'Current Status'
+                                : 'Next Period In',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Text(_isCurrentlyOnPeriod ? 'Period Day $_currentPeriodDay' : '$_daysUntilNextPeriod Days',
-                              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                          Text(
+                            _isCurrentlyOnPeriod
+                                ? 'Period Day $_currentPeriodDay'
+                                : '$_daysUntilNextPeriod Days',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
-                      const Icon(Icons.water_drop, color: Colors.white, size: 40),
+                      const Icon(
+                        Icons.water_drop,
+                        color: Colors.white,
+                        size: 40,
+                      ),
                     ],
                   ),
                   const Divider(color: Colors.white24, height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildInfoSmall("Expected", DateFormat('MMM dd').format(_nextPeriodDate)),
+                      _buildInfoSmall(
+                        "Expected",
+                        DateFormat('MMM dd').format(_nextPeriodDate),
+                      ),
                       _buildInfoSmall("Cycle Log", "$_cycleLength Days"),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -179,9 +327,19 @@ class _WellnessScreenState extends State<WellnessScreen> {
             // --- 3. CYCLE SETTINGS ---
             Row(
               children: [
-                _buildSummaryCard(context, 'Cycle Length', '$_cycleLength Days', Icons.refresh),
+                _buildSummaryCard(
+                  context,
+                  'Cycle Length',
+                  '$_cycleLength Days',
+                  Icons.refresh,
+                ),
                 const SizedBox(width: 16),
-                _buildSummaryCard(context, 'Duration', '$_periodLength Days', Icons.calendar_today),
+                _buildSummaryCard(
+                  context,
+                  'Duration',
+                  '$_periodLength Days',
+                  Icons.calendar_today,
+                ),
               ],
             ),
 
@@ -189,17 +347,17 @@ class _WellnessScreenState extends State<WellnessScreen> {
 
             // --- 4. ACTION TILES ---
             _buildActionTile(
-              context, 
-              Icons.edit_calendar, 
-              'Update Last Period', 
+              context,
+              Icons.edit_calendar,
+              'Update Last Period',
               'Start: ${DateFormat('MMM dd').format(_lastPeriodDate)}',
               onTap: () => _selectLastPeriod(context),
             ),
             const SizedBox(height: 12),
             _buildActionTile(
-              context, 
-              Icons.note_alt_outlined, 
-              'Log Symptoms', 
+              context,
+              Icons.note_alt_outlined,
+              'Log Symptoms',
               'Track mood, pain, or flow',
               onTap: _showNoteDialog,
             ),
@@ -210,8 +368,14 @@ class _WellnessScreenState extends State<WellnessScreen> {
             if (_healthNotes.isNotEmpty) ...[
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text("Recent Notes", 
-                    style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text(
+                  "Recent Notes",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               ListView.builder(
@@ -231,10 +395,18 @@ class _WellnessScreenState extends State<WellnessScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item['note'], style: TextStyle(color: textColor, fontSize: 15)),
+                        Text(
+                          item['note'],
+                          style: TextStyle(color: textColor, fontSize: 15),
+                        ),
                         const SizedBox(height: 6),
-                        Text(DateFormat('MMM dd, hh:mm a').format(item['date']), 
-                             style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text(
+                          DateFormat('MMM dd, hh:mm a').format(item['date']),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -261,11 +433,17 @@ class _WellnessScreenState extends State<WellnessScreen> {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF9146FF).withOpacity(0.2)),
-        boxShadow: [if(!isDark) BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+        ],
       ),
       child: Column(
         children: [
-          const Text("Active Period Tracker", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            "Active Period Tracker",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -275,20 +453,44 @@ class _WellnessScreenState extends State<WellnessScreen> {
 
               return Column(
                 children: [
-                  Text("D${index + 1}", style: TextStyle(fontSize: 10, color: isToday ? const Color(0xFF9146FF) : Colors.grey)),
+                  Text(
+                    "D${index + 1}",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isToday ? const Color(0xFF9146FF) : Colors.grey,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Container(
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isToday ? const Color(0xFF9146FF) : (isPast ? const Color(0xFF9146FF).withOpacity(0.2) : Colors.transparent),
-                      border: Border.all(color: isPast || isToday ? const Color(0xFF9146FF) : Colors.grey.withOpacity(0.3)),
+                      color: isToday
+                          ? const Color(0xFF9146FF)
+                          : (isPast
+                                ? const Color(0xFF9146FF).withOpacity(0.2)
+                                : Colors.transparent),
+                      border: Border.all(
+                        color: isPast || isToday
+                            ? const Color(0xFF9146FF)
+                            : Colors.grey.withOpacity(0.3),
+                      ),
                     ),
                     child: Center(
-                      child: isPast 
-                        ? const Icon(Icons.check, size: 16, color: Color(0xFF9146FF)) 
-                        : Text("${index + 1}", style: TextStyle(color: isToday ? Colors.white : Colors.grey, fontWeight: FontWeight.bold)),
+                      child: isPast
+                          ? const Icon(
+                              Icons.check,
+                              size: 16,
+                              color: Color(0xFF9146FF),
+                            )
+                          : Text(
+                              "${index + 1}",
+                              style: TextStyle(
+                                color: isToday ? Colors.white : Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -304,13 +506,27 @@ class _WellnessScreenState extends State<WellnessScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildSummaryCard(BuildContext context, String title, String value, IconData icon) {
+  Widget _buildSummaryCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+  ) {
     final theme = Theme.of(context);
     return Expanded(
       child: Container(
@@ -325,15 +541,31 @@ class _WellnessScreenState extends State<WellnessScreen> {
           children: [
             Icon(icon, color: const Color(0xFF9146FF), size: 20),
             const SizedBox(height: 8),
-            Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-            Text(value, style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: const TextStyle(color: Colors.grey, fontSize: 11),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionTile(BuildContext context, IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
+  Widget _buildActionTile(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle, {
+    VoidCallback? onTap,
+  }) {
     final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
@@ -349,7 +581,10 @@ class _WellnessScreenState extends State<WellnessScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFF9146FF).withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: const Color(0xFF9146FF).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
               child: const Icon(Icons.edit, color: Color(0xFF9146FF), size: 20),
             ),
             const SizedBox(width: 16),
@@ -357,8 +592,17 @@ class _WellnessScreenState extends State<WellnessScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
-                  Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -375,8 +619,13 @@ class _WellnessScreenState extends State<WellnessScreen> {
       children: [
         const Icon(Icons.lock_outline, color: Colors.orangeAccent, size: 14),
         const SizedBox(width: 8),
-        Text('Secure, local-only health tracking',
-            style: TextStyle(color: isDark ? Colors.grey : Colors.grey[700], fontSize: 11)),
+        Text(
+          'Secure, local-only health tracking',
+          style: TextStyle(
+            color: isDark ? Colors.grey : Colors.grey[700],
+            fontSize: 11,
+          ),
+        ),
       ],
     );
   }

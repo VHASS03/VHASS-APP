@@ -1,0 +1,7 @@
+# ML Model Requirements
+# Install with: pip install -r ml/requirements.txt
+
+tensorflow==2.13.0
+keras==2.13.0
+numpy==1.24.3
+scikit-learn==1.3.0

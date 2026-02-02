@@ -1,7 +1,101 @@
 import 'package:flutter/material.dart';
+import '../../core/services/chat_service.dart';
 
-class ChatScreen extends StatelessWidget {
-  const ChatScreen({super.key});
+class ChatMessage {
+  final String text;
+  final bool isAI;
+  final DateTime timestamp;
+
+  ChatMessage({
+    required this.text,
+    required this.isAI,
+    required this.timestamp,
+  });
+}
+
+class ChatScreen extends StatefulWidget {
+  final String token;
+  final String serverUrl;
+
+  const ChatScreen({required this.token, required this.serverUrl, super.key});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  final ChatService _chatService = ChatService();
+  late List<ChatMessage> _messages;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messages = [];
+    // Add welcome message
+    _messages.add(ChatMessage(
+      text: "Hi! I'm your personal safety assistant. How can I help you today?",
+      isAI: true,
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    final userMessage = _messageController.text.trim();
+    _messageController.clear();
+
+    // Add user message to UI
+    setState(() {
+      _messages.add(ChatMessage(
+        text: userMessage,
+        isAI: false,
+        timestamp: DateTime.now(),
+      ));
+      _isLoading = true;
+    });
+
+    try {
+      // Send to backend
+      final response = await _chatService.sendMessage(
+        message: userMessage,
+        token: widget.token,
+        serverUrl: widget.serverUrl,
+      );
+
+      if (response.success && response.data != null) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: response.data!,
+            isAI: true,
+            timestamp: DateTime.now(),
+          ));
+        });
+      } else {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: "Sorry, I couldn't process that. Please try again.",
+            isAI: true,
+            timestamp: DateTime.now(),
+          ));
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: "Error: ${e.toString()}",
+          isAI: true,
+          timestamp: DateTime.now(),
+        ));
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +118,9 @@ class ChatScreen extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
             style: IconButton.styleFrom(
               backgroundColor: theme.cardColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ),
@@ -33,7 +129,11 @@ class ChatScreen extends StatelessWidget {
             CircleAvatar(
               backgroundColor: theme.colorScheme.primary,
               radius: 18,
-              child: const Icon(Icons.smart_toy_outlined, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.smart_toy_outlined,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Column(
@@ -42,15 +142,15 @@ class ChatScreen extends StatelessWidget {
                 Text(
                   'Safety Assistant',
                   style: TextStyle(
-                    fontSize: 18, 
-                    fontWeight: FontWeight.bold, 
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                     color: textColor, // 3. Dynamic Title
                   ),
                 ),
                 Text(
                   'Always here to help',
                   style: TextStyle(
-                    fontSize: 11, 
+                    fontSize: 11,
                     color: isDark ? Colors.blueGrey : Colors.blueGrey[600],
                   ),
                 ),
@@ -62,29 +162,51 @@ class ChatScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(20),
-              children: [
-                // --- EMERGENCY DISCLAIMER ---
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    // 4. Subtle red tint that works in both modes
-                    color: Colors.red.withOpacity(isDark ? 0.1 : 0.05),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                return _buildMessageBubble(
+                  context,
+                  message.text,
+                  isAi: message.isAI,
+                );
+              },
+            ),
+          ),
+          if (_isLoading)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 30,
+                height: 30,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'This is not emergency support. For immediate danger, use the SOS button.',
                           style: TextStyle(
-                            color: isDark ? const Color(0xFFE57373) : Colors.red[800], 
-                            fontSize: 13, 
+                            color: isDark
+                                ? const Color(0xFFE57373)
+                                : Colors.red[800],
+                            fontSize: 13,
                             height: 1.4,
                           ),
                         ),
@@ -100,7 +222,7 @@ class ChatScreen extends StatelessWidget {
                   "Hi! I'm your personal safety assistant. How can I help you today?",
                   isAi: true,
                 ),
-                
+
                 // USER MESSAGE
                 _buildMessageBubble(
                   context,
@@ -129,16 +251,21 @@ class ChatScreen extends StatelessWidget {
                     decoration: InputDecoration(
                       hintText: 'Ask about safety tips, health...',
                       hintStyle: TextStyle(
-                        color: isDark ? Colors.grey : Colors.grey[600], 
+                        color: isDark ? Colors.grey : Colors.grey[600],
                         fontSize: 14,
                       ),
                       filled: true,
                       // 5. Input field uses dynamic card color
                       fillColor: theme.cardColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: isDark ? BorderSide.none : BorderSide(color: Colors.grey.withOpacity(0.2)),
+                        borderSide: isDark
+                            ? BorderSide.none
+                            : BorderSide(color: Colors.grey.withOpacity(0.2)),
                       ),
                     ),
                   ),
@@ -165,7 +292,11 @@ class ChatScreen extends StatelessWidget {
   }
 
   // Updated Message Bubble with context for theme access
-  Widget _buildMessageBubble(BuildContext context, String text, {required bool isAi}) {
+  Widget _buildMessageBubble(
+    BuildContext context,
+    String text, {
+    required bool isAi,
+  }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 

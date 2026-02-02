@@ -1,9 +1,38 @@
 import 'package:flutter/material.dart';
-// Import your auth screen once you've created the file
-import 'auth/login_screen.dart'; 
+import '../core/services/auth_service.dart';
+import 'auth/login_screen.dart';
+import 'home/home.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    // Check if user is already logged in
+    await Future.delayed(const Duration(seconds: 2)); // Splash delay
+
+    if (mounted) {
+      final isLoggedIn = await AuthService.isLoggedIn();
+
+      if (isLoggedIn) {
+        // User is logged in, go to home
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // User not logged in, go to login
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +44,6 @@ class SplashScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(), // Pushes content to the middle
-              
               // Logo and Branding
               const Icon(Icons.shield, size: 80, color: Color(0xFF6A1B9A)),
               const SizedBox(height: 24),
@@ -33,9 +61,8 @@ class SplashScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
-              
-              const Spacer(), // Pushes button to the bottom
 
+              const Spacer(), // Pushes button to the bottom
               // Get Started Button
               SizedBox(
                 width: double.infinity, // Full width button
@@ -43,11 +70,7 @@ class SplashScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate to Login Screen
-                     Navigator.push(
-                       context,
-                       MaterialPageRoute(builder: (context) => const LoginScreen()),
-                     );
-                    print("Navigate to Login");
+                    Navigator.of(context).pushReplacementNamed('/login');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6A1B9A),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import '../colors.dart';
 
 class SOSButton extends StatefulWidget {
@@ -10,8 +9,10 @@ class SOSButton extends StatefulWidget {
   State<SOSButton> createState() => _SOSButtonState();
 }
 
-class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMixin {
+class _SOSButtonState extends State<SOSButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  bool _isPressed = false;
 
   @override
   void initState() {
@@ -19,7 +20,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(); // The ripples repeat indefinitely
+    ); // Animation will be controlled by press state
   }
 
   @override
@@ -31,6 +32,26 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onLongPressStart: (_) {
+        setState(() {
+          _isPressed = true;
+        });
+        _controller.repeat(); // Start ripples when pressed
+      },
+      onLongPressEnd: (_) {
+        setState(() {
+          _isPressed = false;
+        });
+        _controller.stop();
+        _controller.reset();
+      },
+      onLongPressCancel: () {
+        setState(() {
+          _isPressed = false;
+        });
+        _controller.stop();
+        _controller.reset();
+      },
       onLongPress: widget.onActivate,
       child: CustomPaint(
         painter: RipplePainter(_controller),
@@ -41,11 +62,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
             shape: BoxShape.circle,
             color: AppColors.emergency,
             boxShadow: [
-              BoxShadow(
-                color: Colors.black54,
-                blurRadius: 20,
-                spreadRadius: 2,
-              )
+              BoxShadow(color: Colors.black54, blurRadius: 20, spreadRadius: 2),
             ],
           ),
           child: Column(
@@ -55,10 +72,17 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
               SizedBox(height: 12),
               Text(
                 'SOS',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               SizedBox(height: 4),
-              Text('HOLD FOR HELP', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(
+                'HOLD FOR HELP',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
             ],
           ),
         ),
@@ -86,7 +110,9 @@ class RipplePainter extends CustomPainter {
     double radius = (rect.width / 2) * (1 + value * 0.5);
 
     final Paint paint = Paint()
-      ..color = AppColors.emergency.withOpacity(opacity * 0.5); // Subtle red ripples
+      ..color = AppColors.emergency.withOpacity(
+        opacity * 0.5,
+      ); // Subtle red ripples
 
     canvas.drawCircle(rect.center, radius, paint);
   }

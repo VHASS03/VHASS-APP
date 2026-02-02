@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../theme_controller.dart'; 
+import '../../theme_controller.dart';
 import 'safety_device.dart';
+import '../../core/services/auth_service.dart';
+import '../../core/services/storage_service.dart';
+import '../../core/services/background_voice_service.dart';
+import '../../core/services/wellness_service.dart';
+import '../auth/login_screen.dart';
 
 // --- ADDED THIS CLASS: The missing parent widget ---
 class SettingsScreen extends StatefulWidget {
@@ -11,6 +16,24 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  String? _userPhone;
+  String? _userName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final phone = await StorageService.getPhone();
+    final name = await StorageService.getUserName();
+    setState(() {
+      _userPhone = phone;
+      _userName = name;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -31,11 +54,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _buildSectionHeader("PROFILE"),
             _buildSettingCard(
-              title: "Your Profile",
-              subtitle: "+91 98765 43210",
+              title: _userName ?? "Your Profile",
+              subtitle: _userPhone ?? "+91 98765 43210",
               icon: Icons.person_outline,
               onTap: () {
-                // Navigate to Profile Screen if you have one
+                // Show profile dialog with user info
+                _showProfileDialog();
               },
             ),
 
@@ -47,7 +71,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SafetyDeviceScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const SafetyDeviceScreen(),
+                  ),
                 );
               },
             ),
@@ -58,10 +84,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: isDark ? Icons.dark_mode : Icons.light_mode,
               trailing: Switch(
                 value: isDark,
-                activeColor: const Color(0xFF9146FF),
+                activeThumbColor: const Color(0xFF9146FF),
                 onChanged: (bool value) {
                   // Ensure themeNotifier is defined in your theme_controller.dart
-                  themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                  themeNotifier.value = value
+                      ? ThemeMode.dark
+                      : ThemeMode.light;
                 },
               ),
             ),
@@ -72,10 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
 
             _buildSectionHeader("SUPPORT"),
-            _buildSettingCard(
-              title: "Help & FAQs",
-              icon: Icons.help_outline,
-            ),
+            _buildSettingCard(title: "Help & FAQs", icon: Icons.help_outline),
 
             const SizedBox(height: 32),
             _buildLogoutButton(),
@@ -128,7 +153,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            trailing ?? const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            trailing ??
+                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
           ],
         ),
       ),
@@ -141,10 +167,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: const TextStyle(
-          color: Colors.grey, 
-          fontSize: 11, 
-          fontWeight: FontWeight.bold, 
-          letterSpacing: 1.2
+          color: Colors.grey,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
         ),
       ),
     );
@@ -153,7 +179,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildLogoutButton() {
     return InkWell(
       onTap: () {
-        // Implement Logout logic
+        _showLogoutDialog();
       },
       child: Container(
         width: double.infinity,
@@ -168,7 +194,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Icon(Icons.logout, color: Colors.red),
             SizedBox(width: 12),
-            Text("Logout", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            Text(
+              "Logout",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -179,8 +208,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return const Center(
       child: Column(
         children: [
-          Text("VHASS v1.0.0", style: TextStyle(color: Colors.grey, fontSize: 12)),
-          Text("Made with care for your safety", style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(
+            "VHASS v1.0.0",
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          Text(
+            "Made with care for your safety",
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text(
+          'Are you sure you want to logout? Voice listening will be stopped and your session will end.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              try {
+                // Stop voice listening before logout
+                await BackgroundVoiceService.stopBackgroundService();
+                print('🛑 Voice service stopped on logout');
+
+                // Get userId before clearing auth data
+                final userId = await StorageService.getUserId();
+                if (userId != null && userId.isNotEmpty) {
+                  // Clear user's wellness data
+                  await WellnessService.clearUserWellnessData(userId);
+                  print('🧹 Wellness data cleared for user $userId');
+                }
+              } catch (e) {
+                print('❌ Error during logout cleanup: $e');
+              }
+
+              // Clear all auth data
+              await AuthService.logout();
+
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showProfileDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Your Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Name: ${_userName ?? 'Not available'}'),
+            const SizedBox(height: 8),
+            Text('Phone: ${_userPhone ?? 'Not available'}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );

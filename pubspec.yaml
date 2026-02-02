@@ -36,6 +36,38 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  
+  # HTTP and API communication
+  http: ^1.1.0
+  socket_io_client: ^2.0.3+1
+  
+  # Local storage for tokens
+  shared_preferences: ^2.2.2
+  
+  # Location services
+  geolocator: ^11.0.0
+  permission_handler: ^11.1.0
+  
+  # Voice and speech recognition
+  speech_to_text: ^7.3.0  # Re-enabled for continuous voice monitoring
+  # Device info
+  device_info_plus: ^9.1.1
+  
+  # URL launcher for calls/SMS
+  url_launcher: ^6.2.2
+  
+  # Google Maps
+  google_maps_flutter: ^2.8.0
+  
+  # Notifications - High-priority SOS alerts that work in silent mode
+  flutter_local_notifications: ^17.2.3
+  android_alarm_manager_plus: ^4.0.0
+  
+  # Biometric authentication for emergency cancellation
+  local_auth: ^2.1.8
+  
+  # Bluetooth connectivity for safety devices
+  flutter_blue_plus: ^1.32.12
 
 dev_dependencies:
   flutter_test:
