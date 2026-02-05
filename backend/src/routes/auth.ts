@@ -62,7 +62,7 @@ router.post(
 
       // Verify MongoDB connection is actually working by running a test query
       try {
-        await mongoose.connection.db.admin().ping();
+        await mongoose.connection.db?.admin().ping();
         console.log('✅ MongoDB connection verified');
       } catch (pingError) {
         console.error('❌ MongoDB ping failed:', pingError);

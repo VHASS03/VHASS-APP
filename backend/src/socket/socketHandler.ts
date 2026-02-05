@@ -133,7 +133,7 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
     const activeSOS = await SOS.findOne({
       userId,
       status: { $in: [SOSStatus.TRIGGERED, SOSStatus.CONTACTING, SOSStatus.RESPONDER_ASSIGNED, SOSStatus.ACTIVE] },
-    });
+    }).lean();
 
     if (activeSOS) {
       const roomName = `sos:${activeSOS._id}`;

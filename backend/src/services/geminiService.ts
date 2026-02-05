@@ -40,7 +40,7 @@ class GeminiService {
   async getResponse(userId: string, userMessage: string): Promise<string> {
     try {
       const model = this.client.getGenerativeModel({
-        model: 'gemini-pro',
+        model: 'gemini-1.5-flash',
         systemInstruction: this.getSystemPrompt(),
         safetySettings: [
           {
@@ -109,7 +109,7 @@ class GeminiService {
   async *streamResponse(userId: string, userMessage: string): AsyncGenerator<string, void, unknown> {
     try {
       const model = this.client.getGenerativeModel({
-        model: 'gemini-pro',
+        model: 'gemini-1.5-flash',
         systemInstruction: this.getSystemPrompt(),
       });
 
@@ -192,7 +192,7 @@ Keep responses focused on safety, health, and wellness topics relevant to the VH
    */
   async checkConnection(): Promise<boolean> {
     try {
-      const model = this.client.getGenerativeModel({ model: 'gemini-pro' });
+      const model = this.client.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const result = await model.generateContent('Hi');
       console.log('✅ Gemini connection successful');
       return true;

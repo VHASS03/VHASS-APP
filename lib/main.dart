@@ -17,7 +17,7 @@ void main() async {
   await NotificationService.initialize();
 
   // Initialize SOS alert service to listen for incoming alerts from contacts
-  _initializeSOSAlertService();
+  await _initializeSOSAlertService();
 
   // Request permissions on app startup
   await _requestPermissions();

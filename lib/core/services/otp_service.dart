@@ -105,13 +105,13 @@ class OTPService {
       print('🔌 Calling _socket.connect()...');
       _socket.connect();
 
-      // Wait for connection with timeout
-      print('⏳ Waiting for Socket.IO connection (max 5 seconds)...');
+      // Wait for connection with timeout (reduced from 5s to 3s for faster UX)
+      print('⏳ Waiting for Socket.IO connection (max 3 seconds)...');
       try {
         final connected = await _connectionCompleter!.future.timeout(
-          const Duration(seconds: 5),
+          const Duration(seconds: 3),
           onTimeout: () {
-            print('❌ Socket.IO connection timeout after 5 seconds');
+            print('❌ Socket.IO connection timeout after 3 seconds');
             print('   Backend at $serverUrl did not respond');
             return false;
           },

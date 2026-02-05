@@ -35,7 +35,7 @@ class Database {
       });
 
       // Verify connection is actually working by running a ping
-      await mongoose.connection.db.admin().ping();
+      await mongoose.connection.db?.admin().ping();
       
       this.isConnected = true;
       console.log('✅ MongoDB connected successfully');

@@ -44,7 +44,12 @@ class SMSService {
   /// Send OTP via native Android SMS
   /// Works on real devices (not emulator)
   /// Automatically requests permission if needed
-  static Future<bool> sendOTP(String phoneNumber, String otp) async {
+  /// 
+  /// The message format is compatible with SMS Retriever API:
+  /// - Must start with <#> or contain the OTP code
+  /// - Must end with app signature hash (11 characters)
+  /// - Total message should be under 140 characters
+  static Future<bool> sendOTP(String phoneNumber, String otp, {String? appSignature}) async {
     try {
       // Request permission first
       final hasPermission = await requestSMSPermission();
@@ -56,10 +61,20 @@ class SMSService {
       print('📱 Attempting to send SMS to: $phoneNumber');
       print('   OTP: $otp');
 
+      // Format message for SMS Retriever API compatibility
+      // The message must end with the app signature hash for auto-read to work
+      String message;
+      if (appSignature != null && appSignature.isNotEmpty) {
+        // SMS Retriever API format: <#> prefix + message + app signature
+        message = '<#> Your VHASS code is: $otp\n$appSignature';
+      } else {
+        // Fallback format without app signature
+        message = 'Your VHASS verification code is: $otp. Valid for 10 minutes.';
+      }
+
       final result = await platform.invokeMethod('sendSMS', {
         'phoneNumber': phoneNumber,
-        'message':
-            'Your VHASS verification code is: $otp. Valid for 10 minutes.',
+        'message': message,
       });
 
       if (result == true) {

@@ -18,7 +18,7 @@ class SOSService {
       Position? position;
       try {
         position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+          desiredAccuracy: LocationAccuracy.medium,
         );
       } catch (e) {
         print('Location error: $e');
@@ -61,7 +61,8 @@ class SOSService {
   static Future<void> _executeInstructions(
     List<DeviceInstruction> instructions,
   ) async {
-    for (final instruction in instructions) {
+    // Execute instructions in parallel for faster emergency response
+    await Future.wait(instructions.map((instruction) async {
       if (instruction.action == 'CALL') {
         await _makeCall(instruction.phoneNumber, instruction.countryCode);
       } else if (instruction.action == 'SEND_SMS') {
@@ -71,7 +72,7 @@ class SOSService {
           instruction.countryCode,
         );
       }
-    }
+    }));
   }
 
   /// Make phone call
@@ -127,7 +128,7 @@ class SOSService {
 
     try {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.medium,
       );
 
       await ApiService.post('/sos/update-location', {
@@ -151,7 +152,7 @@ class SOSService {
       Position? position;
       try {
         position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+          desiredAccuracy: LocationAccuracy.medium,
         );
       } catch (e) {
         // Continue without location
@@ -219,8 +220,7 @@ class SOSService {
             print('⚠️ [SOS] Failed to send SMS to ${contact.name}');
           }
 
-          // Small delay between SMS to avoid rate limiting
-          await Future.delayed(const Duration(milliseconds: 500));
+          // SMS sent - no delay for faster emergency response
         } catch (e) {
           print('❌ [SOS] Error sending SMS to ${contact.name}: $e');
         }

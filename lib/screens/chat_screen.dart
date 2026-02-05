@@ -100,7 +100,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _connectSocket();
-    _loadChatHistory();
+    // History is loaded in onConnect handler to avoid duplicate calls
   }
 
   void _connectSocket() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:sms_autofill/sms_autofill.dart';
 import '../../core/colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/otp_service.dart';
@@ -18,7 +19,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with CodeAutoFill {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
 
@@ -31,6 +32,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Timer? _resendTimer;
   int _resendCountdown = 0;
   bool _canResendOTP = false;
+  
+  // SMS Autofill
+  String? _appSignature;
 
   @override
   void initState() {
@@ -41,6 +45,60 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Initialize OTP real-time listener
     _initializeOTPListener();
+    
+    // Initialize SMS Autofill
+    _initializeSmsAutofill();
+  }
+  
+  /// Initialize SMS Autofill using Android SMS Retriever API
+  Future<void> _initializeSmsAutofill() async {
+    try {
+      // Get app signature for SMS Retriever API (needed for backend to format SMS)
+      _appSignature = await SmsAutoFill().getAppSignature;
+      print('📱 SMS Autofill App Signature: $_appSignature');
+      
+      // Listen for incoming SMS with OTP code
+      await SmsAutoFill().listenForCode();
+      print('✅ SMS Autofill listener started');
+    } catch (e) {
+      print('⚠️ SMS Autofill initialization failed: $e');
+    }
+  }
+  
+  @override
+  void codeUpdated() {
+    // Called when SMS with OTP is received via SMS Retriever API
+    if (code != null && code!.isNotEmpty) {
+      print('📱 SMS Autofill received OTP: $code');
+      setState(() {
+        _otpController.text = code!;
+        _showOTPNotification = true;
+      });
+      
+      // Show notification
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Text('OTP auto-filled: $code'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
+      // Auto-verify after a short delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && _otpController.text.length == 6 && _isOtpSent) {
+          _verifyOTP();
+        }
+      });
+    }
   }
 
   void _initializeOTPListener() async {
@@ -99,6 +157,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _phoneController.dispose();
     _otpController.dispose();
     OTPService.disconnect(); // Disconnect OTP Socket when leaving screen
+    SmsAutoFill().unregisterListener(); // Unregister SMS autofill listener
+    cancel(); // Cancel CodeAutoFill mixin
     super.dispose();
   }
 
@@ -175,12 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ] else ...[
                     _buildInputLabel('One-Time Password'),
                     const SizedBox(height: 12),
-                    _buildTextField(
-                      _otpController,
-                      'Enter 6-digit OTP',
-                      Icons.lock_outline,
-                      maxLength: 6,
-                    ),
+                    _buildOtpField(),
                   ],
 
                   const SizedBox(height: 12),
@@ -433,16 +488,17 @@ class _LoginScreenState extends State<LoginScreen> {
           otpForSMS = response.data!['otp'].toString();
         }
 
-        // Step 3: Send actual SMS to device (NO external service)
+        // Step 3: Send actual SMS to device with SMS Retriever API format
         if (otpForSMS != null) {
           print('📱 Step 3: Sending SMS via Android native SMS...');
           final smsSent = await SMSService.sendOTP(
             _phoneController.text,
             otpForSMS,
+            appSignature: _appSignature, // Include app signature for SMS Retriever API
           );
 
           if (smsSent) {
-            print('✅ SMS sent successfully');
+            print('✅ SMS sent successfully with SMS Retriever API format');
           } else {
             print('⚠️  SMS sending failed - but Socket.IO OTP still works');
           }
@@ -540,6 +596,36 @@ class _LoginScreenState extends State<LoginScreen> {
         text,
         style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16),
       ),
+    );
+  }
+
+  Widget _buildOtpField() {
+    return PinFieldAutoFill(
+      controller: _otpController,
+      codeLength: 6,
+      autoFocus: true,
+      decoration: UnderlineDecoration(
+        textStyle: const TextStyle(
+          fontSize: 24,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+        colorBuilder: FixedColorBuilder(
+          Colors.white.withOpacity(0.3),
+        ),
+        bgColorBuilder: FixedColorBuilder(
+          const Color(0xFF1A1A22),
+        ),
+      ),
+      currentCode: _otpController.text,
+      onCodeChanged: (code) {
+        if (code != null && code.length == 6) {
+          _verifyOTP();
+        }
+      },
+      onCodeSubmitted: (code) {
+        _verifyOTP();
+      },
     );
   }
 

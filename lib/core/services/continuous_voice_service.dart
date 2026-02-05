@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter/foundation.dart';
 
@@ -112,7 +113,7 @@ class ContinuousVoiceService {
           seconds: 5,
         ), // Pause for 5 seconds between words
         partialResults: false, // Only process final results
-        localeId: 'en_IN', // Indian English
+        localeId: Platform.localeName.startsWith('en') ? Platform.localeName : 'en_US', // Use device locale or fallback to en_US
         listenMode: stt.ListenMode.dictation, // Continuous dictation mode
       );
 

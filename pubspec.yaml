@@ -68,6 +68,9 @@ dependencies:
   
   # Bluetooth connectivity for safety devices
   flutter_blue_plus: ^1.32.12
+  
+  # SMS OTP Autofill - Uses Android SMS Retriever API
+  sms_autofill: ^2.4.0
 
 dev_dependencies:
   flutter_test:

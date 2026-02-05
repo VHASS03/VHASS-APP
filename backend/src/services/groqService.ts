@@ -46,7 +46,7 @@ class GroqService {
       // Build messages array with system prompt
       const messages: any[] = [
         {
-          role: 'user',
+          role: 'system',
           content: this.getSystemPrompt(),
         },
         ...history.map((msg) => ({
@@ -99,7 +99,7 @@ class GroqService {
       // Build messages array with system prompt
       const messages: any[] = [
         {
-          role: 'user',
+          role: 'system',
           content: this.getSystemPrompt(),
         },
         ...history.map((msg) => ({

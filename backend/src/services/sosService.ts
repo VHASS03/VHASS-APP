@@ -463,9 +463,6 @@ class SOSService {
    * Deactivate SOS using PIN verification
    */
   async deactivateWithPIN(sosId: string, userId: string, deviceId: string, pin: string): Promise<any> {
-    // Get User model
-    const User = require('../models/User').default;
-    
     // Find SOS
     const sos = await SOS.findById(sosId);
     if (!sos) {
@@ -496,7 +493,7 @@ class SOSService {
       validPin = pin === user.sosPIN;
     } else {
       // Use device PIN (last 4 digits of phone)
-      const lastFourDigits = user.phoneNumber.slice(-4);
+      const lastFourDigits = user.phone.slice(-4);
       validPin = pin === lastFourDigits;
     }
 
@@ -535,8 +532,6 @@ class SOSService {
    * Set user's custom SOS deactivation PIN
    */
   async setSosPin(userId: string, pin: string): Promise<void> {
-    const User = require('../models/User').default;
-
     const user = await User.findById(userId);
     if (!user) {
       throw new Error('User not found');
@@ -577,7 +572,7 @@ class SOSService {
       }
 
       // Get the io instance from global scope (set in server.ts)
-      const app = global.app as any;
+      const app = (global as any).app;
       const io = app?.get?.('io');
 
       const alertPayload = {

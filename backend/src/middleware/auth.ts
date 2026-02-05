@@ -48,9 +48,9 @@ export const authenticate = async (
       return;
     }
 
-    // Update last seen
+    // Update last seen asynchronously (non-blocking for low latency)
     device.lastSeenAt = new Date();
-    await device.save();
+    device.save().catch(err => console.error('lastSeenAt update failed:', err));
 
     // Attach user info to request
     req.user = {

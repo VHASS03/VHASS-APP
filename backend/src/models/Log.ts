@@ -2,9 +2,9 @@ import mongoose, { Document, Schema } from 'mongoose';
 import { LogType } from '../types';
 
 export interface ILog extends Document {
-  userId?: mongoose.Types.ObjectId;
+  userId?: mongoose.Types.ObjectId | string;
   deviceId?: string;  // Device ID string from app
-  sosId?: mongoose.Types.ObjectId;
+  sosId?: mongoose.Types.ObjectId | string;
   logType: LogType;
   message: string;
   metadata?: Record<string, any>;

@@ -53,10 +53,6 @@ export const setupChatHandlers = (socket: Socket): void => {
       // Emit typing indicator
       socket.emit('chat:typing', { isTyping: true });
 
-      // Simulate bot thinking (250-750ms delay)
-      const delay = Math.random() * 500 + 250;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-
       // Generate bot response using Gemini AI with fallback
       let botResponse: string;
       try {

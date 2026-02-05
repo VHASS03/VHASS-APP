@@ -137,7 +137,7 @@ class VoiceService {
       // Log successful voice trigger with ML detection details
       await Log.create({
         userId,
-        logType: LogType.SOS,
+        logType: LogType.SOS_TRIGGER,
         message: `Voice-triggered SOS activated: "${transcribedText}" (${detection.method}, conf: ${detection.confidence})`,
         metadata: {
           sosId: sosResult.sosId,
@@ -164,7 +164,7 @@ class VoiceService {
       // Log the error
       await Log.create({
         userId,
-        logType: LogType.SOS,
+        logType: LogType.SOS_TRIGGER,
         message: `Voice trigger failed: ${error.message}`,
         metadata: { transcribedText, error: error.message },
       });
@@ -181,8 +181,8 @@ class VoiceService {
    */
   addTriggerPhrase(phrase: string): void {
     const normalizedPhrase = phrase.toLowerCase().trim();
-    if (!this.TRIGGER_PHRASES.includes(normalizedPhrase)) {
-      this.TRIGGER_PHRASES.push(normalizedPhrase);
+    if (!this.FALLBACK_TRIGGER_PHRASES.includes(normalizedPhrase)) {
+      (this.FALLBACK_TRIGGER_PHRASES as string[]).push(normalizedPhrase);
       console.log(`➕ Added new trigger phrase: "${normalizedPhrase}"`);
     }
   }
@@ -191,7 +191,7 @@ class VoiceService {
    * Get current trigger phrases
    */
   getTriggerPhrases(): string[] {
-    return [...this.TRIGGER_PHRASES];
+    return [...this.FALLBACK_TRIGGER_PHRASES];
   }
 }
 

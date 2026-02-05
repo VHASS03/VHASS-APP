@@ -7,6 +7,9 @@ import '../models/api_response.dart';
 /// Base API Service
 /// Handles HTTP requests with authentication
 class ApiService {
+  /// HTTP request timeout duration
+  static const Duration _requestTimeout = Duration(seconds: 15);
+
   /// Get headers with authentication token
   static Future<Map<String, String>> _getHeaders() async {
     final token = await StorageService.getToken();
@@ -27,7 +30,7 @@ class ApiService {
 
       print('🔵 [GET] $endpoint - Headers: $headers');
 
-      final response = await http.get(url, headers: headers);
+      final response = await http.get(url, headers: headers).timeout(_requestTimeout);
 
       print('🟡 [GET] Response: ${response.statusCode} - ${response.body}');
 
@@ -63,7 +66,7 @@ class ApiService {
         url,
         headers: headers,
         body: json.encode(body),
-      );
+      ).timeout(_requestTimeout);
 
       // Debug log response
       // ignore: avoid_print
@@ -94,7 +97,7 @@ class ApiService {
         url,
         headers: headers,
         body: json.encode(body),
-      );
+      ).timeout(_requestTimeout);
 
       final jsonData = json.decode(response.body);
       return ApiResponse.fromJson(jsonData, fromJson);
@@ -116,7 +119,7 @@ class ApiService {
       final url = Uri.parse('${ApiConfig.baseUrl}$endpoint');
       final headers = await _getHeaders();
 
-      final response = await http.delete(url, headers: headers);
+      final response = await http.delete(url, headers: headers).timeout(_requestTimeout);
 
       final jsonData = json.decode(response.body);
       return ApiResponse.fromJson(jsonData, fromJson);

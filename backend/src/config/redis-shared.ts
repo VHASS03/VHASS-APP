@@ -24,7 +24,7 @@ class SharedRedisClient {
   private lastErrorTime: number = 0;
   private errorCount: number = 0;
   private readonly ERROR_THROTTLE_MS = 5000;
-  private readonly PING_INTERVAL_MS = 5000; // PING every 5 seconds to prevent idle timeout (Redis Cloud timeout ~5min)
+  private readonly PING_INTERVAL_MS = 30000; // PING every 30 seconds to prevent idle timeout (Redis Cloud timeout ~5min)
 
   private constructor() {}
 
@@ -63,12 +63,8 @@ class SharedRedisClient {
       enableOfflineQueue: true,
       // Keep TCP connections alive to reduce NAT timeouts
       keepAlive: 30000,
-      // Socket configuration to prevent idle timeout
-      socket: {
-        keepAlive: true,
-        keepAliveInitialDelay: 30000,
-        noDelay: true, // TCP_NODELAY - send data immediately
-      },
+      // lazyConnect to allow for connection error handling
+      lazyConnect: false,
       // Reconnect automatically on network errors
       reconnectOnError: (err: any) => {
         const msg = err && (err.message || err.code || err.errno);
@@ -212,7 +208,8 @@ class SharedRedisClient {
   }
 
   // ===== Location Methods =====
-  async setLocation(userId: string, location: string, ttl: number = 300): Promise<void> {
+  // TTL reduced from 300s to 60s for real-time SOS location tracking
+  async setLocation(userId: string, location: string, ttl: number = 60): Promise<void> {
     const key = `location:${userId}`;
     await this.getClient().setex(key, ttl, location);
   }
