@@ -120,14 +120,14 @@ class OTPService {
       print('🔌 Calling _socket.connect()...');
       _socket!.connect();
 
-      // Wait for connection with timeout
-      print('⏳ Waiting for Socket.IO connection (max 5 seconds)...');
+      // Wait for connection with longer timeout (Render free tier can be slow to wake)
+      print('⏳ Waiting for Socket.IO connection (max 30 seconds, Render cold start may be slow)...');
       try {
         final connected = await _connectionCompleter!.future.timeout(
-          const Duration(seconds: 5),
+          const Duration(seconds: 30),
           onTimeout: () {
-            print('❌ Socket.IO connection timeout after 5 seconds');
-            print('   Backend at $serverUrl did not respond');
+            print('❌ Socket.IO connection timeout after 30 seconds');
+            print('   Backend at $serverUrl did not respond in time (Render free tier may be waking up)');
             return false;
           },
         );
@@ -165,14 +165,14 @@ class OTPService {
       print('   Device ID: $_deviceId');
       print('   Socket connected: $isConnected');
 
-      // If not connected, wait up to 3 seconds for connection
+      // If not connected, wait for connection (up to 30 seconds)
       if (!isConnected) {
         print(
-          '⏳ Socket not connected, waiting for connection (max 3 seconds)...',
+          '⏳ Socket not connected, waiting for connection (max 30 seconds, including Render cold start)...',
         );
 
         int attempts = 0;
-        while ((_socket == null || !_socket!.connected) && attempts < 30) {
+        while ((_socket == null || !_socket!.connected) && attempts < 300) {
           await Future.delayed(const Duration(milliseconds: 100));
           attempts++;
         }

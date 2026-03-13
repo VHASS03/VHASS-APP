@@ -1,4 +1,5 @@
 import SOS from '../models/SOS';
+import SOSState from '../models/SOSState';
 import EmergencyContact from '../models/EmergencyContact';
 import User from '../models/User';
 import { SOSStatus, DeviceInstruction } from '../types';
@@ -80,10 +81,22 @@ class SOSService {
       userName,
     };
 
-    await redisClient.setSOSState(
-      sos._id.toString(),
-      JSON.stringify(sosState),
-      parseInt(process.env.SOS_MAX_DURATION_SECONDS || '3600')
+    const ttl = parseInt(process.env.SOS_MAX_DURATION_SECONDS || '3600');
+
+    await redisClient.setSOSState(sos._id.toString(), JSON.stringify(sosState), ttl);
+
+    await SOSState.findOneAndUpdate(
+      { sosId: sos._id.toString() },
+      {
+        sosId: sos._id.toString(),
+        userId,
+        deviceId,
+        status: SOSStatus.TRIGGERED,
+        currentContactIndex: 0,
+        startedAt: sos.startedAt,
+        userName,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     // Log SOS trigger
@@ -212,7 +225,22 @@ class SOSService {
       const state = JSON.parse(sosState);
       state.currentContactIndex = nextContactIndex;
       state.status = SOSStatus.CONTACTING;
+
       await redisClient.setSOSState(sosId, JSON.stringify(state));
+
+      await SOSState.findOneAndUpdate(
+        { sosId },
+        {
+          sosId,
+          userId: sos.userId.toString(),
+          deviceId: sos.deviceId,
+          status: SOSStatus.CONTACTING,
+          currentContactIndex: nextContactIndex,
+          startedAt: sos.startedAt,
+          userName: (sos as any).userId?.name || 'User',
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     }
 
     // Log escalation
