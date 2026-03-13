@@ -182,11 +182,27 @@ class SOSService {
     const activeSOS = await SOS.findOne({
       userId,
       status: { $in: [SOSStatus.TRIGGERED, SOSStatus.CONTACTING, SOSStatus.RESPONDER_ASSIGNED, SOSStatus.ACTIVE] },
-    });
+    }).populate('userId', 'name');
 
     if (!activeSOS) {
       return null;
     }
+
+    // Ensure SOSState mirror exists/updated even for previously created SOS
+    const userName = (activeSOS.userId as any)?.name || 'User';
+    await SOSState.findOneAndUpdate(
+      { sosId: activeSOS._id.toString() },
+      {
+        sosId: activeSOS._id.toString(),
+        userId: activeSOS.userId.toString(),
+        deviceId: activeSOS.deviceId,
+        status: activeSOS.status,
+        currentContactIndex: activeSOS.currentContactIndex,
+        startedAt: activeSOS.startedAt,
+        userName,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     return { sosId: activeSOS._id.toString() };
   }
