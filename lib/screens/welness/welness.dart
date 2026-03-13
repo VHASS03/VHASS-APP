@@ -5,7 +5,7 @@ import 'yoga_pose_screen.dart';
 import 'yoga_pose_data.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/config/api_config.dart';
-import '../chat/chat.dart';
+import '../chat_screen.dart';
 
 class WellnessScreen extends StatefulWidget {
   const WellnessScreen({super.key});
@@ -633,13 +633,14 @@ class _WellnessScreenState extends State<WellnessScreen> {
               label: const Text("AI Companion"),
               backgroundColor: const Color(0xFF9146FF),
               onPressed: () async {
+                // Same logic as Home "Chat" feature card
                 final token = await StorageService.getToken();
                 if (token == null) {
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Authentication required. Please log in again to use AI Companion.',
+                        'Authentication required. Please log in again.',
                       ),
                     ),
                   );

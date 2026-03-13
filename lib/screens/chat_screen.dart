@@ -56,11 +56,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Add user message immediately for instant feedback
     setState(() {
-      _messages.add(ChatMessage(
-        sender: 'user',
-        text: message,
-        timestamp: DateTime.now(),
-      ));
+      _messages.add(
+        ChatMessage(sender: 'user', text: message, timestamp: DateTime.now()),
+      );
       _isSending = true;
     });
     _scrollToBottom();
@@ -69,14 +67,18 @@ class _ChatScreenState extends State<ChatScreen> {
       final response = await ChatService.sendMessage(message);
 
       if (response.success && response.data != null) {
-        final aiResponse = response.data!['response'] as String? ?? 'Sorry, I could not process that.';
-        
+        final aiResponse =
+            response.data!['response'] as String? ??
+            'Sorry, I could not process that.';
+
         setState(() {
-          _messages.add(ChatMessage(
-            sender: 'bot',
-            text: aiResponse,
-            timestamp: DateTime.now(),
-          ));
+          _messages.add(
+            ChatMessage(
+              sender: 'bot',
+              text: aiResponse,
+              timestamp: DateTime.now(),
+            ),
+          );
         });
         _scrollToBottom();
       } else {
@@ -93,10 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -165,9 +164,9 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Safety Assistant',
+                  'AI Companion for Your Health',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
@@ -210,45 +209,45 @@ class _ChatScreenState extends State<ChatScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 48,
-                              color: theme.colorScheme.primary.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Hi! I\'m your safety assistant.\nHow can I help you today?',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: isDark ? Colors.grey : Colors.grey[600],
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 48,
+                          color: theme.colorScheme.primary.withOpacity(0.5),
                         ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(20),
-                        itemCount: _messages.length + (_isSending ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // Show typing indicator while waiting for response
-                          if (_isSending && index == _messages.length) {
-                            return _buildTypingIndicator(isDark);
-                          }
+                        const SizedBox(height: 16),
+                        Text(
+                          'Hi! I\'m your safety assistant.\nHow can I help you today?',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: isDark ? Colors.grey : Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(20),
+                    itemCount: _messages.length + (_isSending ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      // Show typing indicator while waiting for response
+                      if (_isSending && index == _messages.length) {
+                        return _buildTypingIndicator(isDark);
+                      }
 
-                          final message = _messages[index];
-                          return _buildMessageBubble(
-                            context,
-                            message.text,
-                            isAi: message.sender == 'bot',
-                          );
-                        },
-                      ),
+                      final message = _messages[index];
+                      return _buildMessageBubble(
+                        context,
+                        message.text,
+                        isAi: message.sender == 'bot',
+                      );
+                    },
+                  ),
           ),
           // Input area
           Container(
@@ -301,8 +300,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               height: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Icon(Icons.send, color: Colors.white),

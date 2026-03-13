@@ -486,6 +486,9 @@ router.post(
       });
     } catch (error: any) {
       if (error.message === 'SOS already active') {
+        // Refresh active SOS timestamps so dashboards show "recent" activity
+        await sosService.touchActiveSOS(req.user!.userId);
+
         // Return existing SOS ID so client can use it
         const existingSOS = await sosService.getActiveSOS(req.user!.userId);
         res.status(409).json({ 

@@ -252,8 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color:
-                          theme.colorScheme.primary, // Using primary from theme
+                      color: theme.colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -272,84 +271,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
-                            // 2. Dynamic Text Color
                             color: theme.textTheme.bodyLarge?.color,
                           ),
                         ),
-                        Row(
-                          children: [
-                            Text(
-                              "You're protected",
-                              style: TextStyle(
-                                // 3. Dynamic Secondary Text
-                                color: isDark
-                                    ? Colors.blueGrey[200]
-                                    : Colors.blueGrey[600],
-                                fontSize: 12,
-                              ),
-                            ),
-                            if (_isVoiceServiceRunning) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.green,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(
-                                      Icons.mic,
-                                      size: 10,
-                                      color: Colors.green,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Listening',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
+                        Text(
+                          "You're protected",
+                          style: TextStyle(
+                            color: isDark
+                                ? Colors.blueGrey[200]
+                                : Colors.blueGrey[600],
+                            fontSize: 12,
+                          ),
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    // 4. Dynamic Icon Color
-                    icon: Icon(
-                      Icons.settings_outlined,
-                      color: isDark ? Colors.grey : Colors.black54,
-                    ),
-                    style: IconButton.styleFrom(
-                      // 5. Dynamic IconButton background
-                      backgroundColor: theme.cardColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                     ),
                   ),
                 ],
@@ -404,7 +338,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Contacts',
                     const ContactsScreen(),
                   ),
-                 
                   _buildFeatureCard(
                     context,
                     Icons.favorite_border_rounded,
@@ -415,8 +348,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     Icons.chat_bubble_outline_rounded,
                     'Chat',
-                    null, // Will be created dynamically
+                    null,
                     isChatButton: true,
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    Icons.settings_outlined,
+                    'Settings',
+                    const SettingsScreen(),
                   ),
                 ],
               ),

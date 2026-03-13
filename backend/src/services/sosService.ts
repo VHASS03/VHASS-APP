@@ -19,6 +19,65 @@ declare global {
  */
 class SOSService {
   /**
+   * "Re-trigger" an already active SOS:
+   * - refresh startedAt so dashboards show a recent timestamp
+   * - refresh Redis + SOSState mirror
+   * This does NOT notify contacts again.
+   */
+  async touchActiveSOS(userId: string): Promise<{ sosId: string } | null> {
+    const activeSOS = await SOS.findOne({
+      userId,
+      status: {
+        $in: [
+          SOSStatus.TRIGGERED,
+          SOSStatus.CONTACTING,
+          SOSStatus.RESPONDER_ASSIGNED,
+          SOSStatus.ACTIVE,
+        ],
+      },
+    }).populate('userId', 'name');
+
+    if (!activeSOS) return null;
+
+    // Refresh startedAt to "now" for UI recency
+    activeSOS.startedAt = new Date();
+    await activeSOS.save();
+
+    const userName = (activeSOS.userId as any)?.name || 'User';
+    const state = {
+      sosId: activeSOS._id.toString(),
+      userId: activeSOS.userId.toString(),
+      deviceId: activeSOS.deviceId,
+      status: activeSOS.status,
+      currentContactIndex: activeSOS.currentContactIndex,
+      startedAt: activeSOS.startedAt.toISOString(),
+      userName,
+    };
+
+    await redisClient.setSOSState(
+      activeSOS._id.toString(),
+      JSON.stringify(state),
+      parseInt(process.env.SOS_MAX_DURATION_SECONDS || '3600')
+    );
+
+    await SOSState.findOneAndUpdate(
+      { sosId: activeSOS._id.toString() },
+      {
+        sosId: activeSOS._id.toString(),
+        userId: activeSOS.userId.toString(),
+        deviceId: activeSOS.deviceId,
+        status: activeSOS.status,
+        currentContactIndex: activeSOS.currentContactIndex,
+        startedAt: activeSOS.startedAt,
+        userName,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return { sosId: activeSOS._id.toString() };
+  }
+
+  /**
    * Trigger new SOS event
    * Only ONE active SOS per user allowed
    */
