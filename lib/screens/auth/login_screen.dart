@@ -45,10 +45,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _initializeOTPListener() async {
     try {
-      // Initialize OTP Socket connection
-      await OTPService.initializeOTPConnection(ApiConfig.socketUrl);
+      // Initialize OTP Socket in background (fallback for auto-fill). Don't block login.
+      OTPService.initializeOTPConnection(ApiConfig.socketUrl).then((_) {
+        print('✅ OTP Socket ready (fallback for auto-fill)');
+      }).catchError((e) {
+        print('❌ OTP Socket init failed (SMS will be used): $e');
+      });
 
-      // Set callback for when OTP is received
+      // Set callback for when OTP is received (e.g. when socket works)
       OTPService.onOTPReceived((otp, phone, expiresIn) {
         if (!mounted) return;
 
@@ -94,9 +98,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       });
 
-      print('✅ OTP listener initialized');
+      print('✅ OTP listener set (socket connects in background)');
     } catch (e) {
-      print('❌ Failed to initialize OTP listener: $e');
+      print('❌ Failed to set OTP listener: $e');
     }
   }
 
@@ -401,7 +405,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// Resend OTP silently without showing messages
-  /// Only shows error if something goes wrong
+  /// Only shows error if something goes wrong. SMS first, socket as fallback.
   Future<void> _resendOTPSilent() async {
     try {
       print('🔄 Silently resending OTP to ${_phoneController.text}...');
@@ -412,14 +416,10 @@ class _LoginScreenState extends State<LoginScreen> {
         _otpController.clear(); // Clear old OTP so user can see new one arrive
       });
 
-      // Register for OTP
-      await OTPService.registerForOTP(_phoneController.text);
-
-      // Send OTP request to backend
+      // Send OTP request to backend first (SMS path)
       final response = await AuthService.sendOTP(_phoneController.text);
 
       if (response.success) {
-        // Extract OTP from response (fallback)
         String? otpForSMS;
         bool smsSentFromServer = false;
 
@@ -430,14 +430,15 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
 
-        // Send device SMS fallback only when backend didn't send
         if (!smsSentFromServer && otpForSMS != null) {
-          print('📱 Backend SMS not sent, using device SMS fallback...');
+          print('📱 Sending OTP via device SMS...');
           await SMSService.sendOTP(_phoneController.text, otpForSMS);
         }
 
+        // Register socket in background for auto-fill if it connects
+        OTPService.registerForOTP(_phoneController.text).catchError((_) {});
+
         print('✅ OTP resent successfully (silent mode)');
-        // Start resend timer for next resend
         _startResendTimer();
       } else {
         // Only show error if something fails
@@ -472,20 +473,12 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Step 1: Register for OTP (real-time via Socket.IO)
-      print('📱 Step 1: Register for OTP before sending...');
-      await OTPService.registerForOTP(_phoneController.text);
-
-      // Step 2: Send OTP request to backend
-      print('📱 Step 2: Sending OTP request to backend...');
+      // Step 1: Send OTP request to backend first (SMS path – fast, no socket dependency)
+      print('📱 Step 1: Sending OTP request to backend (SMS first)...');
       final response = await AuthService.sendOTP(_phoneController.text);
 
-      setState(() {
-        _isLoading = false;
-      });
-
       if (response.success) {
-        // Extract OTP from response (fallback)
+        // Extract OTP from response for SMS delivery
         String? otpForSMS;
         bool smsSentFromServer = false;
 
@@ -496,28 +489,37 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
 
-        // Step 3: Send device SMS ONLY if backend didn't send
+        // Step 2: Ensure user gets OTP via SMS (backend sent it, or we send from device)
         if (!smsSentFromServer && otpForSMS != null) {
-          print('📱 Backend SMS not sent, using device SMS fallback...');
+          print('📱 Sending OTP via device SMS...');
           final smsSent = await SMSService.sendOTP(
             _phoneController.text,
             otpForSMS,
           );
-
           if (smsSent) {
-            print('✅ SMS sent successfully (device fallback)');
+            print('✅ SMS sent successfully');
           } else {
-            print('⚠️  SMS sending failed - but Socket.IO OTP still works');
+            print('⚠️  Device SMS failed – user can still enter OTP if backend sent it');
           }
+        } else if (smsSentFromServer) {
+          print('✅ Backend already sent SMS');
         }
 
         setState(() {
+          _isLoading = false;
           _isOtpSent = true;
           _errorMessage = null;
         });
 
         // Start resend timer
         _startResendTimer();
+
+        // Step 3: Register for socket in background (fallback for auto-fill when socket works)
+        OTPService.registerForOTP(_phoneController.text).then((_) {
+          print('✅ Socket registered for auto-fill (if connected)');
+        }).catchError((e) {
+          print('⚠️  Socket registration skipped: $e');
+        });
 
         // Show success message
         if (mounted) {
@@ -541,6 +543,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else {
         setState(() {
+          _isLoading = false;
           _errorMessage = response.message ?? 'Failed to send OTP';
         });
       }
