@@ -1,37 +1,37 @@
 import 'package:flutter/material.dart';
 import '../core/colors.dart';
 
-// Update: Now accepts Brightness
 ThemeData appTheme(Brightness brightness) {
   final bool isDark = brightness == Brightness.dark;
 
   return ThemeData(
     brightness: brightness,
-    scaffoldBackgroundColor: isDark ? AppColors.background : Colors.white,
+    scaffoldBackgroundColor:
+        isDark ? AppColors.background : AppColors.backgroundLight,
     fontFamily: 'Inter',
-    
-    // Using colorScheme ensures system components (buttons, etc.) react correctly
+
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: brightness,
       primary: AppColors.primary,
-      surface: isDark ? const Color(0xFF16161E) : Colors.white,
+      secondary: AppColors.lavender,
+      surface: isDark ? const Color(0xFF1E1828) : AppColors.backgroundLight,
     ),
 
-    // Define Global Text Styles
     textTheme: TextTheme(
-      bodyLarge: TextStyle(color: isDark ? Colors.white : Colors.black),
-      bodyMedium: TextStyle(color: isDark ? AppColors.textSecondary : Colors.black87),
-      titleMedium: TextStyle(color: isDark ? Colors.white : Colors.black),
+      bodyLarge: TextStyle(color: isDark ? Colors.white : const Color(0xFF3A2D45)),
+      bodyMedium: TextStyle(
+          color: isDark ? AppColors.textSecondary : const Color(0xFF6B5A7A)),
+      titleMedium: TextStyle(color: isDark ? Colors.white : const Color(0xFF3A2D45)),
     ),
 
     appBarTheme: AppBarTheme(
-      backgroundColor: isDark ? AppColors.background : Colors.white,
-      foregroundColor: isDark ? Colors.white : Colors.black, // Icons & Text color
+      backgroundColor:
+          isDark ? AppColors.background : AppColors.backgroundLight,
+      foregroundColor: isDark ? Colors.white : const Color(0xFF3A2D45),
       elevation: 0,
     ),
 
-    // This ensures cards use the right color automatically
-    cardColor: isDark ? const Color(0xFF16161E) : Colors.white,
+    cardColor: isDark ? AppColors.card : AppColors.cardLight,
   );
 }

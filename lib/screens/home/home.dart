@@ -4,11 +4,12 @@ import '../../core/services/storage_service.dart';
 import '../../core/services/background_voice_service.dart';
 import '../../core/services/sos_alert_service.dart';
 import '../../core/config/api_config.dart';
+import '../../core/colors.dart';
 import '../emergency/emergency.dart';
 import '../contacts/contacts.dart';
 import '../voice_sos/voice.dart';
 import '../welness/welness.dart';
-import '../chat_screen.dart'; // Use the functional chat screen, not chat/chat.dart
+import '../chat_screen.dart';
 import '../Settings/settings.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -35,24 +36,19 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       SOSAlertService.onAlertReceived((alert) {
         if (mounted) {
-          print('🚨 [HomeScreen] Received SOS alert from ${alert.userName}');
           setState(() {
             _incomingSOSAlert = alert;
           });
-
-          // Show persistent notification banner
           _showSOSAlertBanner(alert);
         }
       });
-      print('✅ [HomeScreen] SOS alert listener initialized');
     } catch (e) {
-      print('❌ [HomeScreen] Failed to initialize alert listener: $e');
+      debugPrint('Failed to initialize alert listener: $e');
     }
   }
 
   /// Display persistent SOS alert banner
   void _showSOSAlertBanner(SOSAlert alert) {
-    // Remove previous overlay if exists
     _sosAlertOverlay?.remove();
 
     _sosAlertOverlay = OverlayEntry(
@@ -64,10 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.red.shade700,
+              color: AppColors.emergency,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.red.withOpacity(0.5),
+                  color: AppColors.emergency.withOpacity(0.5),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -93,7 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               '🚨 EMERGENCY ALERT',
-                              style: Theme.of(context).textTheme.titleMedium
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -142,14 +140,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            // Could open map or contact details here
-                            print('Viewing ${alert.userName} location');
+                            debugPrint('Viewing ${alert.userName} location');
                           },
                           icon: const Icon(Icons.location_on),
                           label: const Text('View Location'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
-                            foregroundColor: Colors.red.shade700,
+                            foregroundColor: AppColors.emergency,
                           ),
                         ),
                       ),
@@ -157,8 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // Could call the contact
-                            print('Calling ${alert.userName}');
+                            debugPrint('Calling ${alert.userName}');
                           },
                           icon: const Icon(Icons.phone, color: Colors.white),
                           label: const Text(
@@ -183,15 +179,9 @@ class _HomeScreenState extends State<HomeScreen> {
     Overlay.of(context).insert(_sosAlertOverlay!);
   }
 
-  /// Initialize and automatically start voice listening on login
-  /// The app will listen for voice commands while user is logged in
   Future<void> _initializeAndStartVoiceService() async {
     try {
-      // Auto-start voice service when user is logged in
-      // This ensures continuous listening for voice SOS
       await BackgroundVoiceService.startBackgroundService();
-
-      // Check status
       final isEnabled = await BackgroundVoiceService.isServiceEnabled();
       if (mounted) {
         setState(() {
@@ -200,87 +190,101 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (isEnabled) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
+            SnackBar(
+              content: const Row(
                 children: [
                   Icon(Icons.mic, color: Colors.white, size: 20),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '✅ Voice listening is ACTIVE - Say "help me out" for emergency',
+                      '✅ Voice listening is active — Say "help me out"',
                     ),
                   ),
                 ],
               ),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 4),
+              backgroundColor: AppColors.mintAccent.withOpacity(0.85),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              duration: const Duration(seconds: 4),
             ),
           );
         }
       }
     } catch (e) {
-      print('❌ Failed to start voice service: $e');
+      debugPrint('Failed to start voice service: $e');
     }
   }
 
   @override
   void dispose() {
-    // Remove SOS alert overlay if exists
     _sosAlertOverlay?.remove();
-    // Voice service continues running in background even after leaving home
-    // It will only stop when user explicitly logs out
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Accessing theme values instead of hardcoded AppColors
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      // 1. Dynamic Background
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             // --- TOP HEADER ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(12),
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.lavender],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: const Icon(
-                      Icons.shield,
+                      Icons.shield_rounded,
                       color: Colors.white,
                       size: 24,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'VHASS',
+                          'Thrishakthi',
                           style: TextStyle(
                             fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             color: theme.textTheme.bodyLarge?.color,
+                            letterSpacing: 1.2,
                           ),
                         ),
+                        const SizedBox(height: 0),
                         Text(
-                          "You're protected",
+                          "You're safe with us 💜",
                           style: TextStyle(
                             color: isDark
-                                ? Colors.blueGrey[200]
-                                : Colors.blueGrey[600],
-                            fontSize: 12,
+                                ? AppColors.textSecondary
+                                : AppColors.primary.withOpacity(0.7),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -306,19 +310,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   Text(
                     'Press & hold for 2 seconds',
                     style: TextStyle(
-                      // 6. Dynamic Main Label Color
                       color: theme.textTheme.bodyLarge?.color,
-                      fontSize: 16,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  const SizedBox(height: 6),
+                  Text(
                     'or say "Help me out"',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                    style: TextStyle(
+                      color: isDark
+                          ? AppColors.textSecondary
+                          : const Color(0xFF9B89A8),
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -328,7 +337,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // --- BOTTOM FEATURE CARDS ---
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -337,12 +347,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icons.group_outlined,
                     'Contacts',
                     const ContactsScreen(),
+                    accentColor: AppColors.lavender,
                   ),
                   _buildFeatureCard(
                     context,
                     Icons.favorite_border_rounded,
                     'Wellness',
                     const WellnessScreen(),
+                    accentColor: AppColors.blush,
                   ),
                   _buildFeatureCard(
                     context,
@@ -350,12 +362,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Chat',
                     null,
                     isChatButton: true,
+                    accentColor: AppColors.mintAccent,
                   ),
                   _buildFeatureCard(
                     context,
                     Icons.settings_outlined,
                     'Settings',
                     const SettingsScreen(),
+                    accentColor: AppColors.peach,
                   ),
                 ],
               ),
@@ -372,18 +386,21 @@ class _HomeScreenState extends State<HomeScreen> {
     String label,
     Widget? destination, {
     bool isChatButton = false,
+    Color accentColor = AppColors.primary,
   }) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () async {
-        // For chat button, create ChatScreen with token and serverUrl
         if (isChatButton) {
           final token = await StorageService.getToken();
           if (token == null) {
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Authentication required. Please log in again.'),
+                content:
+                    Text('Authentication required. Please log in again.'),
               ),
             );
             return;
@@ -405,19 +422,24 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       },
-      child: Container(
-        width: 80,
-        height: 90,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 78,
+        height: 88,
         decoration: BoxDecoration(
-          // 7. Dynamic Card Background
-          color: theme.cardColor,
+          color: isDark
+              ? accentColor.withOpacity(0.10)
+              : accentColor.withOpacity(0.18),
           borderRadius: BorderRadius.circular(20),
-          // Added a subtle shadow for light mode visibility
+          border: Border.all(
+            color: accentColor.withOpacity(isDark ? 0.20 : 0.15),
+            width: 1,
+          ),
           boxShadow: [
-            if (theme.brightness == Brightness.light)
+            if (!isDark)
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
+                color: accentColor.withOpacity(0.10),
+                blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
           ],
@@ -425,16 +447,14 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 8. Dynamic Icon color (primary)
-            Icon(icon, color: theme.colorScheme.primary, size: 28),
+            Icon(icon, color: accentColor, size: 26),
             const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
-                // 9. Dynamic Label color
                 color: theme.textTheme.bodyLarge?.color,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

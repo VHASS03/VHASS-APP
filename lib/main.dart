@@ -127,6 +127,7 @@ class MyApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (_, ThemeMode currentMode, __) {
         return MaterialApp(
+          title: 'Thrishakthi',
           debugShowCheckedModeBanner: false,
           themeMode: currentMode,
           theme: appTheme(Brightness.light),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/services/auth_service.dart';
+import '../core/colors.dart';
 import 'auth/login_screen.dart';
 import 'home/home.dart';
 
@@ -36,6 +37,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -43,45 +47,75 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(), // Pushes content to the middle
+              const Spacer(),
               // Logo and Branding
-              const Icon(Icons.shield, size: 80, color: Color(0xFF6A1B9A)),
-              const SizedBox(height: 24),
-              const Text(
-                'VHASS',
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.lavender],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.shield, size: 60, color: Colors.white),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                'Thrishakthi',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 34,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 2.0,
+                  letterSpacing: 1.5,
+                  color: isDark ? Colors.white : const Color(0xFF3A1D5C),
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Instant help. Even when you can’t speak.',
+              const SizedBox(height: 6),
+              Text(
+                'powered by VHASS',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.grey : Colors.grey[600],
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Instant help. Even when you can\'t speak.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+                style: TextStyle(
+                  color: isDark ? Colors.grey : Colors.grey[600],
+                  fontSize: 16,
+                ),
               ),
 
-              const Spacer(), // Pushes button to the bottom
+              const Spacer(),
               // Get Started Button
               SizedBox(
-                width: double.infinity, // Full width button
+                width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Navigate to Login Screen
                     Navigator.of(context).pushReplacementNamed('/login');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6A1B9A),
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 0,
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Text(
                         'Get Started',
                         style: TextStyle(

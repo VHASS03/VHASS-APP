@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/colors.dart';
 import '../../theme_controller.dart';
 import 'safety_device.dart';
 import '../../core/services/auth_service.dart';
@@ -85,7 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: isDark ? Icons.dark_mode : Icons.light_mode,
               trailing: Switch(
                 value: isDark,
-                activeThumbColor: const Color(0xFF9146FF),
+                activeThumbColor: AppColors.primary,
                 onChanged: (bool value) {
                   // Ensure themeNotifier is defined in your theme_controller.dart
                   themeNotifier.value = value
@@ -140,7 +141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF9146FF)),
+            Icon(icon, color: AppColors.primary),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -218,11 +219,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         children: [
           Text(
-            "VHASS v1.0.0",
+            "Thrishakthi v1.0.0",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
+          SizedBox(height: 2),
           Text(
-            "Made with care for your safety",
+            "powered by VHASS",
+            style: TextStyle(color: Colors.grey, fontSize: 11),
+          ),
+          SizedBox(height: 4),
+          Text(
+            "Made with care for your safety 💜",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ],
@@ -461,7 +468,7 @@ class _HealthReminderSettingsSheetState
                       max: 120,
                       divisions: 7,
                       label: '$_intervalMinutes min',
-                      activeColor: const Color(0xFF9146FF),
+                      activeColor: AppColors.primary,
                       onChanged: _remindersEnabled
                           ? (value) {
                               setState(() => _intervalMinutes = value.toInt());
@@ -592,7 +599,7 @@ class _HealthReminderSettingsSheetState
                   icon: const Icon(Icons.send),
                   label: const Text('Send Test Reminder'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF9146FF),
+                    foregroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -655,7 +662,7 @@ class _HealthReminderSettingsSheetState
           ),
           Switch(
             value: value,
-            activeColor: const Color(0xFF9146FF),
+            activeColor: AppColors.primary,
             onChanged: onChanged,
           ),
         ],

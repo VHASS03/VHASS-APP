@@ -5,6 +5,7 @@ import '../../core/services/sms_service.dart';
 import '../../core/services/otp_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/phone_formatter.dart';
+import '../../core/colors.dart';
 import '../home/home.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -588,9 +589,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         counterText: "",
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-        prefixIcon: Icon(icon, color: const Color(0xFF9146FF), size: 20),
+        prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
         filled: true,
-        fillColor: isDark ? const Color(0xFF16161E) : Colors.grey[100],
+        fillColor: isDark ? AppColors.card : AppColors.cardLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    _isOtpSent ? 'Verify OTP' : 'Welcome to VHASS',
+                    _isOtpSent ? 'Verify OTP' : 'Welcome to Thrishakthi',
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -302,11 +302,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
-                        // Use a lighter color when disabled for better UX
-                        backgroundColor: const Color(0xFF3B125C),
-                        disabledBackgroundColor: const Color(
-                          0xFF3B125C,
-                        ).withOpacity(0.3),
+                        backgroundColor: AppColors.primary,
+                        disabledBackgroundColor: AppColors.primary.withOpacity(0.3),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -644,7 +641,7 @@ class _LoginScreenState extends State<LoginScreen> {
         hintStyle: const TextStyle(color: Colors.grey),
         prefixIcon: Icon(icon, color: Colors.grey),
         filled: true,
-        fillColor: const Color(0xFF1A1A22),
+        fillColor: AppColors.card,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
