@@ -5,6 +5,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Minew BeaconSET Plus: add MTBeaconPlus.aar to app/libs/ — see libs/README_MINEW.md
+val minewBeaconPlusAar = file("libs/MTBeaconPlus.aar")
+
 android {
     namespace = "com.example.my_app"
     compileSdk = flutter.compileSdkVersion
@@ -25,7 +28,8 @@ android {
         applicationId = "com.example.my_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion  // Ensure minimum SDK version
+        // Minew SDK requires minSdk 24 when MTBeaconPlus.aar is present (official guide).
+        minSdk = if (minewBeaconPlusAar.exists()) maxOf(flutter.minSdkVersion, 24) else flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -41,10 +45,24 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Omit Minew Kotlin sources until the vendor AAR is present (keeps CI / fresh clones building).
+    sourceSets {
+        getByName("main") {
+            if (!minewBeaconPlusAar.exists()) {
+                java {
+                    exclude("**/minew/MinewBeaconPlusPlugin.kt")
+                }
+            }
+        }
+    }
 }
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    if (minewBeaconPlusAar.exists()) {
+        implementation(files("libs/MTBeaconPlus.aar"))
+    }
 }
 
 flutter {

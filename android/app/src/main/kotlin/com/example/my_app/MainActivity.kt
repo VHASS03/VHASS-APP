@@ -136,6 +136,20 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // Minew BeaconSET Plus (optional): only registers when MTBeaconPlus.aar is in app/libs/
+        tryRegisterMinewBeaconPlus(flutterEngine)
+    }
+
+    /** Loads [com.example.my_app.minew.MinewBeaconPlusPlugin] via reflection so the project builds without the vendor AAR. */
+    private fun tryRegisterMinewBeaconPlus(flutterEngine: FlutterEngine) {
+        try {
+            val clazz = Class.forName("com.example.my_app.minew.MinewBeaconPlusPlugin")
+            val m = clazz.getMethod("registerWith", FlutterEngine::class.java, Context::class.java)
+            m.invoke(null, flutterEngine, this)
+        } catch (_: Throwable) {
+            // No AAR / class excluded — safe to ignore.
+        }
     }
     
     private fun saveUserDataForService(authToken: String, userId: String, serverUrl: String) {

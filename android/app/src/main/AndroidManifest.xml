@@ -92,7 +92,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
-        
+
         <!-- Stealth Overlay Activity (shows black screen during SOS, HIDES DIALER) -->
         <activity
             android:name=".StealthOverlayActivity"

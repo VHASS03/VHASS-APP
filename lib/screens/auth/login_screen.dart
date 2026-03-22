@@ -46,11 +46,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void _initializeOTPListener() async {
     try {
       // Initialize OTP Socket in background (fallback for auto-fill). Don't block login.
-      OTPService.initializeOTPConnection(ApiConfig.socketUrl).then((_) {
-        print('✅ OTP Socket ready (fallback for auto-fill)');
-      }).catchError((e) {
-        print('❌ OTP Socket init failed (SMS will be used): $e');
-      });
+      OTPService.initializeOTPConnection(ApiConfig.socketUrl)
+          .then((_) {
+            print('✅ OTP Socket ready (fallback for auto-fill)');
+          })
+          .catchError((e) {
+            print('❌ OTP Socket init failed (SMS will be used): $e');
+          });
 
       // Set callback for when OTP is received (e.g. when socket works)
       OTPService.onOTPReceived((otp, phone, expiresIn) {
@@ -157,14 +159,23 @@ class _LoginScreenState extends State<LoginScreen> {
                             _resendCountdown = 0;
                           });
                         },
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                        ),
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
                       ),
                     )
                   else
                     const SizedBox(height: 0),
-                  if (_isOtpSent) const SizedBox(height: 8) else const SizedBox(height: 0),
+                  if (_isOtpSent)
+                    const SizedBox(height: 8)
+                  else
+                    const SizedBox(height: 0),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -307,7 +318,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        disabledBackgroundColor: AppColors.primary.withOpacity(0.3),
+                        disabledBackgroundColor: AppColors.primary.withOpacity(
+                          0.3,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -378,7 +391,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _startResendTimer() {
     if (!mounted) return;
-    
+
     setState(() {
       _resendCountdown = 30;
       _canResendOTP = false;
@@ -499,7 +512,9 @@ class _LoginScreenState extends State<LoginScreen> {
           if (smsSent) {
             print('✅ SMS sent successfully');
           } else {
-            print('⚠️  Device SMS failed – user can still enter OTP if backend sent it');
+            print(
+              '⚠️  Device SMS failed – user can still enter OTP if backend sent it',
+            );
           }
         } else if (smsSentFromServer) {
           print('✅ Backend already sent SMS');
@@ -515,11 +530,13 @@ class _LoginScreenState extends State<LoginScreen> {
         _startResendTimer();
 
         // Step 3: Register for socket in background (fallback for auto-fill when socket works)
-        OTPService.registerForOTP(_phoneController.text).then((_) {
-          print('✅ Socket registered for auto-fill (if connected)');
-        }).catchError((e) {
-          print('⚠️  Socket registration skipped: $e');
-        });
+        OTPService.registerForOTP(_phoneController.text)
+            .then((_) {
+              print('✅ Socket registered for auto-fill (if connected)');
+            })
+            .catchError((e) {
+              print('⚠️  Socket registration skipped: $e');
+            });
 
         // Show success message
         if (mounted) {
@@ -594,13 +611,15 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       final msg = response.message ?? 'Invalid OTP. Please try again.';
-      final isUserNotFound = msg.toLowerCase().contains('user not found') ||
+      final isUserNotFound =
+          msg.toLowerCase().contains('user not found') ||
           msg.toLowerCase().contains('sign up first');
       if (isUserNotFound && mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => SignUpScreen(initialPhone: _phoneController.text),
+            builder: (context) =>
+                SignUpScreen(initialPhone: _phoneController.text),
           ),
         );
         ScaffoldMessenger.of(context).showSnackBar(
