@@ -1,4 +1,5 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:http/http.dart' as http;
 
 /// SOS Alert Service
 /// Handles incoming SOS alerts from emergency contacts
@@ -8,12 +9,27 @@ class SOSAlertService {
   static final List<SOSAlert> _receivedAlerts = [];
   static Function(SOSAlert alert)? _onAlertReceived;
 
+  static const Duration _connectionTimeout = Duration(seconds: 90);
+
+  static Future<void> _wakeBackend(String serverUrl) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$serverUrl/api/health'))
+          .timeout(const Duration(seconds: 60));
+      if (response.statusCode == 200) {
+        print('✅ [SOSAlertService] Backend wake-up ping OK');
+      }
+    } catch (e) {
+      print('⚠️ [SOSAlertService] Backend wake-up ping failed: $e');
+    }
+  }
+
   /// Initialize Socket.IO connection for SOS alerts
   static Future<void> initializeSOSAlerts(
     String serverUrl,
     String? token,
   ) async {
-    if (_socket != null) {
+    if (_socket != null && _socket!.connected) {
       print('🚨 [SOSAlertService] Already initialized');
       return;
     }
@@ -23,29 +39,47 @@ class SOSAlertService {
         '🚨 [SOSAlertService] Initializing SOS alert listener at $serverUrl',
       );
 
-      _socket = IO.io(serverUrl, <String, dynamic>{
-        'auth': token != null ? {'token': token} : null,
-        'reconnection': true,
-        'reconnectionDelay': 1000,
-        'reconnectionDelayMax': 5000,
-        'reconnectionAttempts': 5,
-      });
+      await _wakeBackend(serverUrl);
 
-      // Listen for SOS alerts from contacts
+      if (_socket != null) {
+        _socket!.clearListeners();
+        _socket!.disconnect();
+        _socket!.dispose();
+        _socket = null;
+      }
+
+      _socket = IO.io(
+        serverUrl,
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .enableForceNew()
+            .disableMultiplex()
+            .setTimeout(_connectionTimeout.inMilliseconds)
+            .setAuth(token != null ? {'token': token} : {})
+            .setReconnectionAttempts(5)
+            .setReconnectionDelay(1000)
+            .setReconnectionDelayMax(8000)
+            .build(),
+      );
+
       _socket!.on('sos:alert-received', (data) {
         _handleSOSAlertReceived(data);
       });
 
-      _socket!.on('connect', (dynamic _) {
+      _socket!.onConnect((_) {
         print('✅ [SOSAlertService] Connected to alert server');
       });
 
-      _socket!.on('disconnect', (dynamic _) {
+      _socket!.onConnectError((data) {
+        print('⚠️ [SOSAlertService] Connect error: $data');
+      });
+
+      _socket!.onDisconnect((_) {
         print('⚠️ [SOSAlertService] Disconnected from alert server');
       });
 
-      _socket!.on('error', (dynamic error) {
-        print('❌ [SOSAlertService] Socket error: $error');
+      _socket!.onError((dynamic error) {
+        print('⚠️ [SOSAlertService] Socket error: $error');
       });
 
       print('✅ [SOSAlertService] SOS alert service initialized');
@@ -62,7 +96,6 @@ class SOSAlertService {
       final alert = SOSAlert.fromJson(data as Map<String, dynamic>);
       _receivedAlerts.add(alert);
 
-      // Call callback if registered
       if (_onAlertReceived != null) {
         _onAlertReceived!(alert);
       }
@@ -89,7 +122,9 @@ class SOSAlertService {
 
   /// Disconnect from alert service
   static void dispose() {
+    _socket?.clearListeners();
     _socket?.disconnect();
+    _socket?.dispose();
     _socket = null;
     print('🚨 [SOSAlertService] Disconnected');
   }
