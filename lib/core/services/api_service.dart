@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/storage_service.dart';
+import '../services/session_service.dart';
 import '../models/api_response.dart';
 
 /// Base API Service
@@ -20,6 +21,7 @@ class ApiService {
   static Future<ApiResponse<T>> get<T>(
     String endpoint, {
     T? Function(dynamic)? fromJson,
+    bool handleUnauthorized = true,
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}$endpoint');
@@ -31,8 +33,16 @@ class ApiService {
 
       print('🟡 [GET] Response: ${response.statusCode} - ${response.body}');
 
+      if (response.statusCode == 401 && handleUnauthorized) {
+        await SessionService.handleExpired();
+      }
+
       final jsonData = json.decode(response.body);
-      return ApiResponse.fromJson(jsonData, fromJson);
+      return ApiResponse.fromJson(
+        jsonData,
+        fromJson,
+        statusCode: response.statusCode,
+      );
     } catch (e) {
       print('🔴 [GET] Error: $e');
       return ApiResponse(
@@ -69,8 +79,16 @@ class ApiService {
       // ignore: avoid_print
       print('🟡 [POST] Response: ${response.statusCode} - ${response.body}');
 
+      if (response.statusCode == 401) {
+        await SessionService.handleExpired();
+      }
+
       final jsonData = json.decode(response.body);
-      return ApiResponse.fromJson(jsonData, fromJson);
+      return ApiResponse.fromJson(
+        jsonData,
+        fromJson,
+        statusCode: response.statusCode,
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
@@ -96,8 +114,16 @@ class ApiService {
         body: json.encode(body),
       );
 
+      if (response.statusCode == 401) {
+        await SessionService.handleExpired();
+      }
+
       final jsonData = json.decode(response.body);
-      return ApiResponse.fromJson(jsonData, fromJson);
+      return ApiResponse.fromJson(
+        jsonData,
+        fromJson,
+        statusCode: response.statusCode,
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
@@ -118,8 +144,16 @@ class ApiService {
 
       final response = await http.delete(url, headers: headers);
 
+      if (response.statusCode == 401) {
+        await SessionService.handleExpired();
+      }
+
       final jsonData = json.decode(response.body);
-      return ApiResponse.fromJson(jsonData, fromJson);
+      return ApiResponse.fromJson(
+        jsonData,
+        fromJson,
+        statusCode: response.statusCode,
+      );
     } catch (e) {
       return ApiResponse(
         success: false,

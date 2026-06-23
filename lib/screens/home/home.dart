@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/sos_button.dart';
 import '../../core/services/storage_service.dart';
-import '../../core/services/background_voice_service.dart';
+import '../../core/services/wake_word_service.dart';
 import '../../core/services/sos_alert_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/colors.dart';
@@ -181,8 +181,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeAndStartVoiceService() async {
     try {
-      await BackgroundVoiceService.startBackgroundService();
-      final isEnabled = await BackgroundVoiceService.isServiceEnabled();
+      await WakeWordService.startService();
+      final isEnabled = await WakeWordService.isServiceEnabled();
       if (mounted) {
         setState(() {
           _isVoiceServiceRunning = isEnabled;
@@ -268,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Thrishakthi',
+                          'Syava AI',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,

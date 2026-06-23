@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import User from '../models/User';
-import Device, { IDevice } from '../models/Device';
+import Device from '../models/Device';
 import EmergencyContact from '../models/EmergencyContact';
 import { DeviceType } from '../types';
 import redisClient from '../config/redis';
@@ -376,7 +376,7 @@ router.post(
       }
 
       // Find user
-      let user = await User.findOne({ phone });
+      const user = await User.findOne({ phone });
       if (!user) {
         res.status(404).json({
           success: false,

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import EmergencyContact from '../models/EmergencyContact';
+import User from '../models/User';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -37,8 +38,9 @@ router.post(
   authenticate,
   [
     body('name').notEmpty().withMessage('Name is required'),
-    body('phone').isLength({ min: 10, max: 10 }).withMessage('Phone must be 10 digits'),
+    body('phone').isLength({ min: 8, max: 15 }).withMessage('Phone must be between 8 and 15 digits'),
     body('priority').isInt({ min: 1, max: 3 }).withMessage('Priority must be 1-3'),
+    body('countryCode').optional().isString().withMessage('Country code must be a string'),
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -49,7 +51,7 @@ router.post(
       }
 
       const { userId } = req.user!;
-      const { name, phone, priority } = req.body;
+      const { name, phone, priority, countryCode } = req.body;
 
       // Check max contacts
       const contactCount = await EmergencyContact.countDocuments({
@@ -85,6 +87,12 @@ router.post(
         name,
         phone,
         priority,
+        countryCode: countryCode || 'IN',
+      });
+
+      // Sync with User document
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { emergencyContacts: contact._id }
       });
 
       res.status(201).json({
@@ -108,8 +116,9 @@ router.put(
   authenticate,
   [
     body('name').optional().notEmpty(),
-    body('phone').optional().isLength({ min: 10, max: 10 }),
+    body('phone').optional().isLength({ min: 8, max: 15 }),
     body('priority').optional().isInt({ min: 1, max: 3 }),
+    body('countryCode').optional().isString(),
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -170,6 +179,11 @@ router.delete('/:id', authenticate, async (req: Request, res: Response): Promise
 
     contact.isActive = false;
     await contact.save();
+
+    // Sync with User document
+    await User.findByIdAndUpdate(userId, {
+      $pull: { emergencyContacts: contact._id }
+    });
 
     res.json({
       success: true,

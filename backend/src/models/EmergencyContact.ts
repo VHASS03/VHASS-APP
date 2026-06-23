@@ -51,8 +51,11 @@ const EmergencyContactSchema = new Schema<IEmergencyContact>(
   }
 );
 
-// Ensure one priority per user
-EmergencyContactSchema.index({ userId: 1, priority: 1 }, { unique: true });
+// Ensure one priority per user for active contacts only
+EmergencyContactSchema.index(
+  { userId: 1, priority: 1 },
+  { unique: true, partialFilterExpression: { isActive: true } }
+);
 EmergencyContactSchema.index({ userId: 1, isActive: 1 });
 
 export default mongoose.model<IEmergencyContact>('EmergencyContact', EmergencyContactSchema);

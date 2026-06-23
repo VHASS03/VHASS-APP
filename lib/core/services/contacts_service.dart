@@ -226,6 +226,22 @@ class ContactsService {
     }
   }
 
+  /// Load contacts from local cache only (no network).
+  static Future<List<Contact>> loadCachedContactsOnly() async {
+    try {
+      final cachedJson = await StorageService.getCachedContacts();
+      if (cachedJson == null || cachedJson.isEmpty) return [];
+
+      final List<dynamic> contactsList = jsonDecode(cachedJson);
+      return contactsList
+          .map((json) => Contact.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('❌ Error loading cached contacts: $e');
+      return [];
+    }
+  }
+
   /// Get contacts from cache (instant, no network delay)
   /// Falls back to network if cache is empty
   static Future<ApiResponse<List<Contact>>> getContactsFromCache() async {

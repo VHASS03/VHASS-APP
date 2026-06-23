@@ -39,26 +39,29 @@ class _ContactsScreenState extends State<ContactsScreen> {
         _isLoading = false;
       });
     } else {
-      if (mounted) {
-        final errorMsg = response.message ?? 'Failed to load contacts';
+      final errorMsg = response.message ?? 'Failed to load contacts';
+      final isAuthError =
+          response.isUnauthorized ||
+          errorMsg.toLowerCase().contains('token') ||
+          errorMsg.toLowerCase().contains('auth');
 
-        // Show additional debug info for token issues
-        if (errorMsg.contains('No token') || errorMsg.contains('token')) {
-          print('❌ Token Issue Detected: $errorMsg');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Authentication error: $errorMsg. Please login again.',
-              ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(errorMsg)));
+      if (isAuthError) {
+        print('❌ Token Issue Detected: $errorMsg');
+        final cached = await ContactsService.loadCachedContactsOnly();
+        if (mounted) {
+          setState(() {
+            _contacts = cached;
+            _isLoading = false;
+          });
         }
+        // ApiService already redirects to login on 401.
+        return;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMsg)));
       }
       setState(() {
         _isLoading = false;

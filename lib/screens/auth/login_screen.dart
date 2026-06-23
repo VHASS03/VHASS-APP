@@ -4,7 +4,7 @@ import '../../core/colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/otp_service.dart';
 import '../../core/services/sms_service.dart';
-import '../../core/services/background_voice_service.dart';
+import '../../core/services/wake_word_service.dart';
 import '../../core/services/contacts_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/config/api_config.dart';
@@ -48,10 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
       // Initialize OTP Socket in background (fallback for auto-fill). Don't block login.
       OTPService.initializeOTPConnection(ApiConfig.socketUrl)
           .then((_) {
-            print('✅ OTP Socket ready (fallback for auto-fill)');
+            print('✅ OTP Socket init finished (SMS remains primary delivery)');
           })
           .catchError((e) {
-            print('❌ OTP Socket init failed (SMS will be used): $e');
+            print('ℹ️ OTP Socket optional path unavailable — SMS will be used: $e');
           });
 
       // Set callback for when OTP is received (e.g. when socket works)
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    _isOtpSent ? 'Verify OTP' : 'Welcome to Thrishakthi',
+                    _isOtpSent ? 'Verify OTP' : 'Welcome to Syava AI',
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -590,9 +590,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (response.success) {
-      // Start background voice monitoring service
-      print('🎤 Starting background voice monitoring service...');
-      await BackgroundVoiceService.startBackgroundService();
+      // Start background wake word monitoring service
+      print('🎤 Starting background wake word monitoring service...');
+      await WakeWordService.startService();
 
       // Initialize notification service for SOS alerts
       print('🔔 Initializing notification service...');

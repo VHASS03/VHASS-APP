@@ -45,10 +45,10 @@ const UserSchema = new Schema<IUser>(
     isPhoneVerified: {
       type: Boolean,
       default: false,
-        sosPIN: {
-          type: String,
-          default: null,
-        },
+    },
+    sosPIN: {
+      type: String,
+      default: null,
     },
     devices: [
       {

@@ -4,7 +4,7 @@ import '../../theme_controller.dart';
 import 'safety_device.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/storage_service.dart';
-import '../../core/services/background_voice_service.dart';
+import '../../core/services/wake_word_service.dart';
 import '../../core/services/wellness_service.dart';
 import '../../core/services/health_reminder_service.dart';
 import '../auth/login_screen.dart';
@@ -219,7 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         children: [
           Text(
-            "Thrishakthi v1.0.0",
+            "Syava AI v1.0.0",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
           SizedBox(height: 2),
@@ -256,7 +256,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               try {
                 // Stop voice listening before logout
-                await BackgroundVoiceService.stopBackgroundService();
+                await WakeWordService.stopService();
                 print('🛑 Voice service stopped on logout');
 
                 // Get userId before clearing auth data

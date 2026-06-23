@@ -7,6 +7,7 @@ import 'core/services/period_notification_service.dart';
 import 'core/services/contacts_service.dart';
 import 'core/services/health_reminder_service.dart';
 import 'core/config/api_config.dart';
+import 'core/navigation/app_navigator.dart';
 import 'theme_controller.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash.dart';
@@ -127,7 +128,8 @@ class MyApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (_, ThemeMode currentMode, __) {
         return MaterialApp(
-          title: 'Thrishakthi',
+          navigatorKey: appNavigatorKey,
+          title: 'Syava AI',
           debugShowCheckedModeBanner: false,
           themeMode: currentMode,
           theme: appTheme(Brightness.light),

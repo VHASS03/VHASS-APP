@@ -48,7 +48,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     
     <application
-        android:label="Thrishakthi"
+        android:label="Syava AI"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -92,6 +92,20 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- Minew BeaconSET Plus: required for connection stage (official SDK guide — Prepare + Notes). -->
+        <!-- If you never add MTBeaconPlus.aar, you may remove this block to avoid referencing SDK classes. -->
+        <service
+            android:name="com.minew.beaconplus.sdk.ConnectService"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.minew.beaconplus.sdk.receivers.BluetoothChangedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Stealth Overlay Activity (shows black screen during SOS, HIDES DIALER) -->
         <activity

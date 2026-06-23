@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -38,6 +40,10 @@ android {
         manifestPlaceholders["com.google.android.geo.API_KEY"] = "AIzaSyABObu0QnKEykNF72Zqt_AdcG-wCgN4UQ4"
     }
 
+    aaptOptions {
+        noCompress("onnx")
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -45,17 +51,13 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
 
-    // Omit Minew Kotlin sources until the vendor AAR is present (keeps CI / fresh clones building).
-    sourceSets {
-        getByName("main") {
-            if (!minewBeaconPlusAar.exists()) {
-                java {
-                    exclude("**/minew/MinewBeaconPlusPlugin.kt")
-                }
-            }
+// Omit Minew Kotlin sources until MTBeaconPlus.aar is present (avoid android.sourceSets `java` DSL clash).
+tasks.withType<KotlinCompile>().configureEach {
+    if (!minewBeaconPlusAar.exists()) {
+        exclude("**/minew/MinewBeaconPlusPlugin.kt")
         }
-    }
 }
 
 dependencies {
@@ -63,7 +65,11 @@ dependencies {
     if (minewBeaconPlusAar.exists()) {
         implementation(files("libs/MTBeaconPlus.aar"))
     }
+    
+    // openWakeWord Library (runs ONNX Runtime Mobile internally)
+    implementation("xyz.rementia:openwakeword:0.1.5")
 }
+
 
 flutter {
     source = "../.."

@@ -157,6 +157,18 @@ class AuthService {
     await StorageService.clearAll();
   }
 
+  /// Verify the stored token is still accepted by the backend.
+  static Future<bool> validateSession() async {
+    final token = await StorageService.getToken();
+    if (token == null || token.isEmpty) return false;
+
+    final response = await ApiService.get<Map<String, dynamic>>(
+      '/voice/health',
+      handleUnauthorized: false,
+    );
+    return response.success;
+  }
+
   /// Check if user is logged in
   static Future<bool> isLoggedIn() async {
     return await StorageService.isLoggedIn();

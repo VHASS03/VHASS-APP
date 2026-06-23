@@ -39,8 +39,7 @@ router.get('/track/:sosId', async (req: Request, res: Response): Promise<void> =
       userName,
       latestLocation,
       isActive,
-      sos.startedAt,
-      sos.status
+      sos.startedAt
     ));
   } catch (error: any) {
     console.error('Track page error:', error);
@@ -92,8 +91,7 @@ function generateTrackingPage(
   userName: string,
   location: any,
   isActive: boolean,
-  startedAt: Date,
-  status: string
+  startedAt: Date
 ): string {
   const lat = location?.latitude || 0;
   const lng = location?.longitude || 0;

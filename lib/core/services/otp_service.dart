@@ -1,5 +1,6 @@
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:io';
 
@@ -14,26 +15,60 @@ class OTPService {
   static Function(String otp, String phone, int expiresIn)? _onOTPReceived;
   static Completer<bool>? _connectionCompleter;
   static bool _initialized = false;
+  static bool _isConnecting = false;
+  static bool _reportedConnectError = false;
+
+  /// Render free tier can take 50+ seconds for the first WebSocket handshake.
+  static const Duration _connectionTimeout = Duration(seconds: 90);
+
+  /// Wake the backend over HTTP before opening WebSocket (helps Render cold start).
+  static Future<void> _wakeBackend(String serverUrl) async {
+    try {
+      final healthUrl = Uri.parse('$serverUrl/api/health');
+      final response = await http
+          .get(healthUrl)
+          .timeout(const Duration(seconds: 60));
+      if (response.statusCode == 200) {
+        print('✅ Backend wake-up ping OK');
+      } else {
+        print('⚠️ Backend wake-up ping returned ${response.statusCode}');
+      }
+    } catch (e) {
+      print('⚠️ Backend wake-up ping failed: $e');
+    }
+  }
 
   /// Initialize OTP Socket connection (no JWT needed for pre-auth)
   static Future<void> initializeOTPConnection(String serverUrl) async {
-    // Check if already initialized and connected
     if (_initialized && _socket != null && _socket!.connected) {
       print('ℹ️  OTP Socket already initialized and connected');
       return;
     }
 
+    if (_isConnecting) {
+      print('ℹ️  OTP Socket connection already in progress');
+      if (_connectionCompleter != null) {
+        await _connectionCompleter!.future.timeout(
+          _connectionTimeout,
+          onTimeout: () => false,
+        );
+      }
+      return;
+    }
+
+    _isConnecting = true;
+    _reportedConnectError = false;
+
     try {
       print('🔌 Initializing OTP Socket connection to: $serverUrl');
+      await _wakeBackend(serverUrl);
 
-      // IMPORTANT: Fully dispose old socket before creating new one
-      // This prevents duplicate event listeners and connections
       if (_socket != null) {
         print('🧹 Disposing old socket before creating new one...');
         try {
-          _socket!.clearListeners(); // Clear all event listeners
+          _socket!.clearListeners();
           _socket!.disconnect();
-          _socket!.dispose(); // Fully destroy the socket
+          _socket!.dispose();
         } catch (e) {
           print('⚠️  Error disposing old socket: $e');
         }
@@ -42,21 +77,26 @@ class OTPService {
 
       _connectionCompleter = Completer<bool>();
 
+      // Flutter mobile only supports WebSocket transport (not HTTP polling).
+      // Render free tier needs a longer timeout than the default 20 seconds.
       _socket = io.io(
         serverUrl,
         io.OptionBuilder()
-            .setTransports(['websocket', 'polling'])
+            .setTransports(['websocket'])
             .disableAutoConnect()
-            .setReconnectionDelay(1000)
-            .setReconnectionDelayMax(5000)
-            .setReconnectionAttempts(10)
+            .enableForceNew()
+            .disableMultiplex()
+            .setTimeout(_connectionTimeout.inMilliseconds)
+            .setReconnectionAttempts(2)
+            .setReconnectionDelay(2000)
+            .setReconnectionDelayMax(8000)
             .build(),
       );
 
-      // Listen for connection events
       _socket!.onConnect((_) {
         print('✅ OTP Socket connected successfully!');
         print('   Socket ID: ${_socket!.id}');
+        _reportedConnectError = false;
 
         if (_connectionCompleter != null && !_connectionCompleter!.isCompleted) {
           _connectionCompleter!.complete(true);
@@ -64,14 +104,10 @@ class OTPService {
       });
 
       _socket!.onConnectError((data) {
-        print('❌ OTP Socket connection ERROR: $data');
-        print('   ⚠️  CRITICAL: Check if backend is running at $serverUrl');
-        print(
-          '   ⚠️  For Android Emulator: Backend should be at http://10.0.2.2:5000',
-        );
-        print(
-          '   ⚠️  For Physical Device: Backend should be at http://YOUR_COMPUTER_IP:5000',
-        );
+        if (!_reportedConnectError) {
+          _reportedConnectError = true;
+          print('⚠️ OTP Socket unavailable ($data) — OTP will be delivered via SMS');
+        }
 
         if (_connectionCompleter != null && !_connectionCompleter!.isCompleted) {
           _connectionCompleter!.complete(false);
@@ -83,10 +119,11 @@ class OTPService {
       });
 
       _socket!.onError((data) {
-        print('⚠️  OTP Socket error event: $data');
+        if (!_reportedConnectError) {
+          print('⚠️  OTP Socket error: $data (SMS fallback active)');
+        }
       });
 
-      // Listen for OTP events
       _socket!.on('auth:otp-received', (data) {
         final otp = data['otp'] as String?;
         final phone = data['phone'] as String?;
@@ -97,7 +134,6 @@ class OTPService {
           _lastReceivedOTP = otp;
           _lastReceivedPhone = phone;
 
-          // Call the callback if registered
           _onOTPReceived?.call(otp, phone, expiresIn);
 
           print('🎉 OTP Received via Socket.IO:');
@@ -110,42 +146,38 @@ class OTPService {
         }
       });
 
-      // Listen for room join confirmation
       _socket!.on('auth:otp-room-joined', (data) {
         print('✅ Successfully joined OTP room: ${data['phone']}');
         print('   Ready to receive OTP for this phone number');
       });
 
-      // IMPORTANT: Actually connect!
-      print('🔌 Calling _socket.connect()...');
+      print('🔌 Connecting OTP Socket (WebSocket, up to 90s on cold start)...');
       _socket!.connect();
 
-      // Wait for connection with longer timeout (Render free tier can be slow to wake)
-      print('⏳ Waiting for Socket.IO connection (max 30 seconds, Render cold start may be slow)...');
       try {
         final connected = await _connectionCompleter!.future.timeout(
-          const Duration(seconds: 30),
+          _connectionTimeout,
           onTimeout: () {
-            print('❌ Socket.IO connection timeout after 30 seconds');
-            print('   Backend at $serverUrl did not respond in time (Render free tier may be waking up)');
+            print(
+              '⚠️ OTP Socket not ready yet — SMS will deliver OTP (Render cold start can be slow)',
+            );
             return false;
           },
         );
 
         if (connected) {
-          print('✅ OTP Socket ready to send/receive OTP');
+          print('✅ OTP Socket ready to receive OTP');
           _initialized = true;
         } else {
-          print('❌ OTP Socket failed to connect');
-          print('   Check backend URL and ensure backend is running');
-          print('   Check firewall and network connectivity');
+          print('ℹ️ OTP Socket skipped — SMS fallback is active');
         }
       } catch (e) {
-        print('❌ Error waiting for connection: $e');
+        print('⚠️ OTP Socket connection wait ended: $e');
       }
     } catch (e) {
-      print('❌ Failed to initialize OTP Socket: $e');
-      rethrow;
+      print('⚠️ OTP Socket init failed (SMS fallback active): $e');
+    } finally {
+      _isConnecting = false;
     }
   }
 
@@ -154,7 +186,6 @@ class OTPService {
   /// MUST be called BEFORE sending OTP API request
   static Future<void> registerForOTP(String phone) async {
     try {
-      // Get device ID if not already cached
       if (_deviceId == null) {
         await _getDeviceId();
       }
@@ -165,36 +196,33 @@ class OTPService {
       print('   Device ID: $_deviceId');
       print('   Socket connected: $isConnected');
 
-      // If not connected, wait for connection (up to 30 seconds)
       if (!isConnected) {
         print(
-          '⏳ Socket not connected, waiting for connection (max 30 seconds, including Render cold start)...',
+          '⏳ Socket not connected, waiting briefly for WebSocket (SMS is primary)...',
         );
 
         int attempts = 0;
-        while ((_socket == null || !_socket!.connected) && attempts < 300) {
+        const maxAttempts = 100; // 10 seconds
+        while ((_socket == null || !_socket!.connected) && attempts < maxAttempts) {
           await Future.delayed(const Duration(milliseconds: 100));
           attempts++;
         }
 
         if (_socket == null || !_socket!.connected) {
-          print('❌ Socket failed to connect after waiting');
-          print('   OTP will rely on SMS fallback');
+          print('ℹ️ Socket not ready — OTP will arrive via SMS');
           return;
         }
       }
 
-      // Register for OTP using DEVICE room, not phone room
-      // This prevents multiple devices on same phone from all receiving OTP
       _socket!.emit('auth:register-for-otp', {
         'phone': phone,
-        'deviceId': _deviceId, // Device-specific routing
+        'deviceId': _deviceId,
       });
       print('✅ Registered for OTP on device: $_deviceId');
       print('   Phone: $phone');
       print('   Waiting for OTP to arrive...');
     } catch (e) {
-      print('❌ Failed to register for OTP: $e');
+      print('⚠️ Socket OTP registration skipped: $e');
     }
   }
 
@@ -245,20 +273,23 @@ class OTPService {
     try {
       if (_socket != null) {
         print('📴 Disconnecting OTP Socket...');
-        _socket!.clearListeners(); // Remove all event listeners first
+        _socket!.clearListeners();
         _socket!.disconnect();
-        _socket!.dispose(); // Fully destroy the socket
+        _socket!.dispose();
         _socket = null;
       }
-      _initialized = false; // Reset so next screen can reinitialize
-      _onOTPReceived = null; // Clear callback to prevent stale references
-      _connectionCompleter = null; // Clear the completer
+      _initialized = false;
+      _isConnecting = false;
+      _reportedConnectError = false;
+      _onOTPReceived = null;
+      _connectionCompleter = null;
       print('📴 OTP Socket disconnected and disposed');
     } catch (e) {
       print('❌ Failed to disconnect OTP Socket: $e');
-      // Reset state even if disconnect fails
       _socket = null;
       _initialized = false;
+      _isConnecting = false;
+      _reportedConnectError = false;
       _onOTPReceived = null;
       _connectionCompleter = null;
     }

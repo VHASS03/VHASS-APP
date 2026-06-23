@@ -26,10 +26,16 @@ class _SplashScreenState extends State<SplashScreen> {
       final isLoggedIn = await AuthService.isLoggedIn();
 
       if (isLoggedIn) {
-        // User is logged in, go to home
-        Navigator.pushReplacementNamed(context, '/home');
+        final sessionValid = await AuthService.validateSession();
+        if (!mounted) return;
+
+        if (sessionValid) {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          await AuthService.logout();
+          Navigator.pushReplacementNamed(context, '/login');
+        }
       } else {
-        // User not logged in, go to login
         Navigator.pushReplacementNamed(context, '/login');
       }
     }
@@ -70,7 +76,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 28),
               Text(
-                'Thrishakthi',
+                'Syava AI',
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
