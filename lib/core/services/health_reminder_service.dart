@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'storage_service.dart';
 
 /// Health Reminder Service
 /// Sends periodic notifications for water intake, posture, eye breaks, and wellness tips
@@ -247,6 +248,11 @@ class HealthReminderService {
     required String title,
     required String body,
   }) async {
+    if (!await StorageService.areNotificationsEnabled()) {
+      print('🏥 [HealthReminder] Notifications are disabled in settings. Skipping.');
+      return;
+    }
+
     try {
       if (Platform.isAndroid) {
         const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(

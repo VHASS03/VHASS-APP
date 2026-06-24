@@ -9,6 +9,8 @@ import '../emergency/emergency.dart';
 import '../contacts/contacts.dart';
 import '../voice_sos/voice.dart';
 import '../welness/welness.dart';
+import '../welness/wellness_hub.dart';
+import '../security/security_portal.dart';
 import '../chat_screen.dart';
 import '../Settings/settings.dart';
 
@@ -89,9 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               '🚨 EMERGENCY ALERT',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -235,8 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // --- TOP HEADER ---
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(
                 children: [
                   Container(
@@ -337,41 +336,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // --- BOTTOM FEATURE CARDS ---
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildFeatureCard(
-                    context,
-                    Icons.group_outlined,
-                    'Contacts',
-                    const ContactsScreen(),
-                    accentColor: AppColors.lavender,
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    Icons.favorite_border_rounded,
-                    'Wellness',
-                    const WellnessScreen(),
-                    accentColor: AppColors.blush,
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    Icons.chat_bubble_outline_rounded,
-                    'Chat',
-                    null,
-                    isChatButton: true,
-                    accentColor: AppColors.mintAccent,
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    Icons.settings_outlined,
-                    'Settings',
-                    const SettingsScreen(),
-                    accentColor: AppColors.peach,
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFeatureCard(
+                      context,
+                      Icons.group_outlined,
+                      'Contacts',
+                      const ContactsScreen(),
+                      accentColor: AppColors.lavender,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildFeatureCard(
+                      context,
+                      Icons.favorite_border_rounded,
+                      'Wellness',
+                      const WellnessHubScreen(),
+                      accentColor: AppColors.blush,
+                    ),
+
+                    const SizedBox(width: 12),
+                    _buildFeatureCard(
+                      context,
+                      Icons.chat_bubble_outline_rounded,
+                      'Chat',
+                      null,
+                      isChatButton: true,
+                      accentColor: AppColors.mintAccent,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildFeatureCard(
+                      context,
+                      Icons.settings_outlined,
+                      'Settings',
+                      const SettingsScreen(),
+                      accentColor: AppColors.peach,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -399,8 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content:
-                    Text('Authentication required. Please log in again.'),
+                content: Text('Authentication required. Please log in again.'),
               ),
             );
             return;
@@ -424,8 +427,8 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 78,
-        height: 88,
+        width: 74,
+        height: 74,
         decoration: BoxDecoration(
           color: isDark
               ? accentColor.withOpacity(0.10)
@@ -447,13 +450,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: accentColor, size: 26),
+            Icon(icon, color: accentColor, size: 24),
             const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
                 color: theme.textTheme.bodyLarge?.color,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),

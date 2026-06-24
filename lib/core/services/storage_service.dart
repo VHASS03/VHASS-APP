@@ -7,6 +7,18 @@ class StorageService {
   static const String _keyDeviceId = 'device_id';
   static const String _keyPhone = 'user_phone';
   static const String _keyName = 'user_name';
+  static const String _keyNotificationsEnabled = 'notifications_enabled';
+
+  /// Save notifications enabled state
+  static Future<void> setNotificationsEnabled(bool enabled) async {
+    await setBool(_keyNotificationsEnabled, enabled);
+  }
+
+  /// Get notifications enabled state
+  static Future<bool> areNotificationsEnabled() async {
+    final enabled = await getBool(_keyNotificationsEnabled);
+    return enabled ?? true; // Defaults to true
+  }
 
   /// Save authentication token
   static Future<void> saveToken(String token) async {

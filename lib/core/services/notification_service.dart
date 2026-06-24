@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'storage_service.dart';
 
 /// Notification Service
 /// Sends high-priority SOS alerts that work even in silent mode
@@ -101,6 +102,11 @@ class NotificationService {
     required double longitude,
     String? address,
   }) async {
+    if (!await StorageService.areNotificationsEnabled()) {
+      print('🔕 Notifications are disabled in settings. Skipping SOS alert notification.');
+      return;
+    }
+
     print(
       '🚨 Sending SOS alert to $contactName about $userName at ($latitude, $longitude)',
     );

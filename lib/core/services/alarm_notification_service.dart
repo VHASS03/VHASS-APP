@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'storage_service.dart';
 
 /// Alarm Notification Service
 ///
@@ -78,6 +79,11 @@ class AlarmNotificationService {
     String? sosId,
     String? senderName,
   }) async {
+    if (!await StorageService.areNotificationsEnabled()) {
+      debugPrint('🔕 Notifications are disabled in settings. Skipping emergency alarm.');
+      return;
+    }
+
     await initialize();
 
     debugPrint('🚨 SHOWING EMERGENCY ALARM: $title');
@@ -138,6 +144,11 @@ class AlarmNotificationService {
     double? latitude,
     double? longitude,
   }) async {
+    if (!await StorageService.areNotificationsEnabled()) {
+      debugPrint('🔕 Notifications are disabled in settings. Skipping location update.');
+      return;
+    }
+
     await initialize();
 
     debugPrint('📍 Location update from $senderName: $mapsLink');

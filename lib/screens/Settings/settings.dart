@@ -20,6 +20,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String? _userPhone;
   String? _userName;
+  bool _notificationsEnabled = true;
 
   @override
   void initState() {
@@ -30,9 +31,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUserData() async {
     final phone = await StorageService.getPhone();
     final name = await StorageService.getUserName();
+    final notificationsEnabled = await StorageService.areNotificationsEnabled();
     setState(() {
       _userPhone = phone;
       _userName = name;
+      _notificationsEnabled = notificationsEnabled;
     });
   }
 
@@ -98,7 +101,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
             _buildSettingCard(
               title: "Notifications",
-              icon: Icons.notifications_none,
+              subtitle: _notificationsEnabled ? "On" : "Off",
+              icon: _notificationsEnabled ? Icons.notifications_active : Icons.notifications_off,
+              trailing: Switch(
+                value: _notificationsEnabled,
+                activeColor: AppColors.primary,
+                onChanged: (bool value) async {
+                  setState(() {
+                    _notificationsEnabled = value;
+                  });
+                  await StorageService.setNotificationsEnabled(value);
+                },
+              ),
             ),
             
             _buildSectionHeader("HEALTH REMINDERS"),

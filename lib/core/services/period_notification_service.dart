@@ -242,6 +242,11 @@ class PeriodNotificationService {
     required String body,
     String? subtitle,
   }) async {
+    if (!await StorageService.areNotificationsEnabled()) {
+      print('🌸 [PeriodNotification] Notifications are disabled in settings. Skipping.');
+      return;
+    }
+
     try {
       if (Platform.isAndroid) {
         final AndroidNotificationDetails androidDetails =
