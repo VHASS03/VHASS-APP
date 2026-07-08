@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
+import 'storage_service.dart';
 
 class Counsellor {
   final String id;
@@ -110,7 +112,7 @@ class UniversityWellnessService {
     // Counsellors
     _counsellors.addAll([
       Counsellor(
-        id: "c1",
+        id: "65b9fc0e5e0423c10b7f8de1",
         name: "Dr. Elena Gilbert",
         specialization: "Anxiety & Depression Specialist",
         imageUrl: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150",
@@ -119,7 +121,7 @@ class UniversityWellnessService {
         email: "elena.g@university.edu",
       ),
       Counsellor(
-        id: "c2",
+        id: "65b9fc0e5e0423c10b7f8de2",
         name: "Dr. Alaric Saltzman",
         specialization: "Stress Management & Academics Specialist",
         imageUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150",
@@ -128,7 +130,7 @@ class UniversityWellnessService {
         email: "alaric.s@university.edu",
       ),
       Counsellor(
-        id: "c3",
+        id: "65b9fc0e5e0423c10b7f8de3",
         name: "Dr. Stefan Salvatore",
         specialization: "Crisis Intervention & Relationships Counsel",
         imageUrl: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=150",
@@ -264,6 +266,101 @@ Navigating relationships at university is vital for social support and personal 
 
   // --- ACTIONS ---
 
+  // Helper to parse timeSlot like "09:00 AM" or "09:30" to 24h format "09:00"
+  String _parseTo24h(String timeSlot) {
+    try {
+      timeSlot = timeSlot.trim().toUpperCase();
+      if (timeSlot.contains("AM") || timeSlot.contains("PM")) {
+        final parts = timeSlot.split(" ");
+        final timeParts = parts[0].split(":");
+        int hour = int.parse(timeParts[0]);
+        final minutes = timeParts[1];
+        if (timeSlot.contains("PM") && hour < 12) {
+          hour += 12;
+        } else if (timeSlot.contains("AM") && hour == 12) {
+          hour = 0;
+        }
+        return "${hour.toString().padLeft(2, '0')}:$minutes";
+      }
+      return timeSlot;
+    } catch (_) {
+      return timeSlot;
+    }
+  }
+
+  String _calculateEndTime(String startTime24h) {
+    try {
+      final parts = startTime24h.split(":");
+      final hour = int.parse(parts[0]);
+      final min = int.parse(parts[1]);
+      final endMinTotal = min + 45;
+      final endHour = (hour + (endMinTotal ~/ 60)) % 24;
+      final endMin = endMinTotal % 60;
+      return "${endHour.toString().padLeft(2, '0')}:${endMin.toString().padLeft(2, '0')}";
+    } catch (_) {
+      return startTime24h; // fallback
+    }
+  }
+
+  Future<List<String>> fetchAvailableSlots(String counsellorId, DateTime date) async {
+    final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    try {
+      final response = await ApiService.get<dynamic>(
+        '/appointments/slots/$counsellorId/$dateStr',
+      );
+      if (response.success && response.data != null) {
+        final dynamic dataList = response.data;
+        if (dataList is List) {
+          return dataList.map((e) => e.toString()).toList();
+        }
+      }
+    } catch (e) {
+      print("❌ Error fetching slots: $e");
+    }
+    // Fallback/Default slots if api fails or is empty
+    final counsellor = _counsellors.firstWhere((c) => c.id == counsellorId, orElse: () => _counsellors.first);
+    return counsellor.availability;
+  }
+
+  Future<List<Appointment>> fetchAppointments() async {
+    try {
+      final response = await ApiService.get<dynamic>(
+        '/appointments',
+      );
+      if (response.success && response.data != null) {
+        final dynamic list = response.data;
+        if (list is List) {
+          _appointments.clear();
+          for (var item in list) {
+            try {
+              final counsellorId = item['counsellor']?.toString() ?? '';
+              final c = _counsellors.firstWhere((c) => c.id == counsellorId, orElse: () => _counsellors.first);
+              final appDate = DateTime.tryParse(item['date']?.toString() ?? '') ?? DateTime.now();
+              final startTime = item['startTime']?.toString() ?? '';
+              
+              _appointments.add(Appointment(
+                id: item['_id']?.toString() ?? '',
+                studentName: item['studentName']?.toString() ?? 'Student',
+                studentPhone: item['studentPhone']?.toString() ?? '',
+                concern: item['notes']?.toString() ?? 'General Support',
+                date: appDate,
+                timeSlot: startTime,
+                counsellor: c,
+                status: item['status']?.toString() ?? 'Pending',
+                isHighPriority: item['type']?.toString() == 'emergency',
+              ));
+            } catch (e) {
+              print("❌ Error parsing appointment: $e");
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print("❌ Error fetching appointments: $e");
+    }
+    return _appointments;
+  }
+
   Future<Appointment> bookAppointment({
     required String studentName,
     required String studentPhone,
@@ -273,17 +370,56 @@ Navigating relationships at university is vital for social support and personal 
     required Counsellor counsellor,
     bool isHighPriority = false,
   }) async {
-    final newAp = Appointment(
-      id: "ap_${DateTime.now().millisecondsSinceEpoch}",
-      studentName: studentName,
-      studentPhone: studentPhone,
-      concern: concern,
-      date: date,
-      timeSlot: timeSlot,
-      counsellor: counsellor,
-      status: "Pending",
-      isHighPriority: isHighPriority,
-    );
+    final studentId = await StorageService.getUserId() ?? "65b9fc0e5e0423c10b7f8abc";
+    final startTime = _parseTo24h(timeSlot);
+    final endTime = _calculateEndTime(startTime);
+    final isoDateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}T00:00:00.000Z";
+
+    final payload = {
+      "student": studentId,
+      "counsellor": counsellor.id,
+      "date": isoDateStr,
+      "startTime": startTime,
+      "endTime": endTime,
+      "type": isHighPriority ? "emergency" : "scheduled",
+      "notes": concern,
+      "status": "pending"
+    };
+
+    Appointment newAp;
+    try {
+      final response = await ApiService.post<dynamic>('/appointments', payload);
+      if (response.success && response.data != null) {
+        final dynamic data = response.data;
+        newAp = Appointment(
+          id: data['_id']?.toString() ?? "ap_${DateTime.now().millisecondsSinceEpoch}",
+          studentName: studentName,
+          studentPhone: studentPhone,
+          concern: concern,
+          date: date,
+          timeSlot: timeSlot,
+          counsellor: counsellor,
+          status: "Pending",
+          isHighPriority: isHighPriority,
+        );
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      print("❌ Error booking appointment on backend, fallback to local: $e");
+      newAp = Appointment(
+        id: "ap_${DateTime.now().millisecondsSinceEpoch}",
+        studentName: studentName,
+        studentPhone: studentPhone,
+        concern: concern,
+        date: date,
+        timeSlot: timeSlot,
+        counsellor: counsellor,
+        status: "Pending",
+        isHighPriority: isHighPriority,
+      );
+    }
+
     _appointments.add(newAp);
     return newAp;
   }

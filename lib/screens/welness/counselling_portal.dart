@@ -24,6 +24,22 @@ class _CounsellingPortalScreenState extends State<CounsellingPortalScreen> {
     "Crisis Intervention",
   ];
 
+  bool _isLoadingAppointments = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppointments();
+  }
+
+  Future<void> _loadAppointments() async {
+    setState(() => _isLoadingAppointments = true);
+    await _wellnessService.fetchAppointments();
+    if (mounted) {
+      setState(() => _isLoadingAppointments = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -58,6 +74,12 @@ class _CounsellingPortalScreenState extends State<CounsellingPortalScreen> {
   }
 
   Widget _buildAppointmentsListTab() {
+    if (_isLoadingAppointments) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
     final list = _wellnessService.appointments;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -82,138 +104,142 @@ class _CounsellingPortalScreenState extends State<CounsellingPortalScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(18),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final appointment = list[index];
-        final isCompleted = appointment.status == "Completed";
-        final isRejected = appointment.status == "Rejected";
+    return RefreshIndicator(
+      onRefresh: _loadAppointments,
+      color: AppColors.primary,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(18),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final appointment = list[index];
+          final isCompleted = appointment.status == "Completed";
+          final isRejected = appointment.status == "Rejected";
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: appointment.isHighPriority ? Colors.red.withOpacity(0.3) : Colors.grey.withOpacity(0.1),
-              width: appointment.isHighPriority ? 1.5 : 1,
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: appointment.isHighPriority ? Colors.red.withOpacity(0.3) : Colors.grey.withOpacity(0.1),
+                width: appointment.isHighPriority ? 1.5 : 1,
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        if (appointment.isHighPriority)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              "CRISIS / HIGH PRIORITY",
+                              style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(appointment.status).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            appointment.status,
+                            style: TextStyle(
+                              color: _getStatusColor(appointment.status),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      DateFormat('MMM dd, yyyy').format(appointment.date),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  appointment.concern,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: NetworkImage(appointment.counsellor.imageUrl),
+                      radius: 16,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      appointment.counsellor.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      appointment.timeSlot,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                  ],
+                ),
+                if (!isCompleted && !isRejected && appointment.status != "Cancelled") ...[
+                  const SizedBox(height: 14),
                   Row(
                     children: [
-                      if (appointment.isHighPriority)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              appointment.status = "Cancelled";
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Appointment cancelled successfully")),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          child: const Text(
-                            "CRISIS / HIGH PRIORITY",
-                            style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
+                          child: const Text("Cancel"),
                         ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(appointment.status).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          appointment.status,
-                          style: TextStyle(
-                            color: _getStatusColor(appointment.status),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _showRescheduleDialog(appointment);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
+                          child: const Text("Reschedule"),
                         ),
                       ),
                     ],
-                  ),
-                  Text(
-                    DateFormat('MMM dd, yyyy').format(appointment.date),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                appointment.concern,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(appointment.counsellor.imageUrl),
-                    radius: 16,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    appointment.counsellor.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(
-                    appointment.timeSlot,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-                ],
-              ),
-              if (!isCompleted && !isRejected) ...[
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            appointment.status = "Cancelled";
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Appointment cancelled successfully")),
-                          );
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: const Text("Cancel"),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _showRescheduleDialog(appointment);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: const Text("Reschedule"),
-                      ),
-                    ),
-                  ],
-                )
-              ]
-            ],
-          ),
-        );
-      },
+                  )
+                ]
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -223,21 +249,24 @@ class _CounsellingPortalScreenState extends State<CounsellingPortalScreen> {
       counsellors: _wellnessService.counsellors,
       onBooked: () {
         setState(() {});
+        _loadAppointments();
         DefaultTabController.of(context).animateTo(0);
       },
     );
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
-      case "Approved":
+    switch (status.toLowerCase()) {
+      case "approved":
+      case "confirmed":
         return Colors.green;
-      case "Pending":
+      case "pending":
+      case "requested":
         return Colors.orange;
-      case "Cancelled":
-      case "Rejected":
+      case "cancelled":
+      case "rejected":
         return Colors.red;
-      case "Completed":
+      case "completed":
         return Colors.blue;
       default:
         return Colors.grey;
@@ -364,6 +393,27 @@ class _BookingWizardState extends State<_BookingWizard> {
   final _phoneCtrl = TextEditingController();
   bool _isCrisis = false;
 
+  List<String> _availableSlots = [];
+  bool _isLoadingSlots = false;
+
+  Future<void> _loadAvailableSlots() async {
+    if (_selectedCounsellor == null) return;
+    setState(() => _isLoadingSlots = true);
+    final slots = await UniversityWellnessService().fetchAvailableSlots(
+      _selectedCounsellor!.id,
+      _selectedDate,
+    );
+    if (mounted) {
+      setState(() {
+        _availableSlots = slots;
+        _isLoadingSlots = false;
+        if (_selectedTimeSlot != null && !_availableSlots.contains(_selectedTimeSlot)) {
+          _selectedTimeSlot = null;
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -470,10 +520,13 @@ class _BookingWizardState extends State<_BookingWizard> {
                   title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(c.specialization, style: const TextStyle(fontSize: 12)),
                   trailing: Text("⭐ ${c.rating}"),
-                  onTap: () => setState(() {
-                    _selectedCounsellor = c;
-                    _selectedTimeSlot = null; // Reset slots
-                  }),
+                  onTap: () {
+                    setState(() {
+                      _selectedCounsellor = c;
+                      _selectedTimeSlot = null; // Reset slots
+                    });
+                    _loadAvailableSlots();
+                  },
                 ),
               );
             }).toList(),
@@ -499,6 +552,7 @@ class _BookingWizardState extends State<_BookingWizard> {
                   );
                   if (picked != null) {
                     setState(() => _selectedDate = picked);
+                    _loadAvailableSlots();
                   }
                 },
               ),
@@ -506,21 +560,25 @@ class _BookingWizardState extends State<_BookingWizard> {
               const Text("Available Slots", style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               if (_selectedCounsellor != null)
-                Wrap(
-                  spacing: 10,
-                  children: _selectedCounsellor!.availability.map((slot) {
-                    final sel = slot == _selectedTimeSlot;
-                    return ChoiceChip(
-                      label: Text(slot),
-                      selected: sel,
-                      onSelected: (selected) {
-                        setState(() => _selectedTimeSlot = selected ? slot : null);
-                      },
-                      selectedColor: AppColors.primary.withOpacity(0.2),
-                      checkmarkColor: AppColors.primary,
-                    );
-                  }).toList(),
-                )
+                _isLoadingSlots
+                    ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    : _availableSlots.isEmpty
+                        ? const Text("No available slots found for this date.", style: TextStyle(color: Colors.red))
+                        : Wrap(
+                            spacing: 10,
+                            children: _availableSlots.map((slot) {
+                              final sel = slot == _selectedTimeSlot;
+                              return ChoiceChip(
+                                label: Text(slot),
+                                selected: sel,
+                                onSelected: (selected) {
+                                  setState(() => _selectedTimeSlot = selected ? slot : null);
+                                },
+                                selectedColor: AppColors.primary.withOpacity(0.2),
+                                checkmarkColor: AppColors.primary,
+                              );
+                            }).toList(),
+                          )
               else
                 const Text("Please select a counsellor first.", style: TextStyle(color: Colors.red)),
             ],
