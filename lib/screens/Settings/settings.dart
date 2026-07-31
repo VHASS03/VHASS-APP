@@ -20,6 +20,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String? _userPhone;
   String? _userName;
+  String? _userId;
+  String? _deviceId;
   bool _notificationsEnabled = true;
 
   @override
@@ -32,10 +34,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final phone = await StorageService.getPhone();
     final name = await StorageService.getUserName();
     final notificationsEnabled = await StorageService.areNotificationsEnabled();
+    final userId = await StorageService.getUserId();
+    final deviceId = await StorageService.getDeviceId();
     setState(() {
       _userPhone = phone;
       _userName = name;
-      _notificationsEnabled = notificationsEnabled;
+      _notificationsEnabled = notificationsEnabled ?? true;
+      _userId = userId;
+      _deviceId = deviceId;
     });
   }
 
@@ -102,7 +108,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSettingCard(
               title: "Notifications",
               subtitle: _notificationsEnabled ? "On" : "Off",
-              icon: _notificationsEnabled ? Icons.notifications_active : Icons.notifications_off,
+              icon: _notificationsEnabled
+                  ? Icons.notifications_active
+                  : Icons.notifications_off,
               trailing: Switch(
                 value: _notificationsEnabled,
                 activeColor: AppColors.primary,
@@ -114,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
             ),
-            
+
             _buildSectionHeader("HEALTH REMINDERS"),
             _buildSettingCard(
               title: "Health Reminders",
@@ -303,29 +311,204 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showProfileDialog() {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Your Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name: ${_userName ?? 'Not available'}'),
-            const SizedBox(height: 8),
-            Text('Phone: ${_userPhone ?? 'Not available'}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      barrierDismissible: true,
+      barrierLabel: "ProfileDetails",
+      barrierColor: Colors.black.withOpacity(0.6),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        final curve = CurvedAnimation(parent: anim1, curve: Curves.easeOutBack);
+        return ScaleTransition(
+          scale: curve,
+          child: FadeTransition(
+            opacity: anim1,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              contentPadding: EdgeInsets.zero,
+              content: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  decoration: BoxDecoration(color: Theme.of(context).cardColor),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header with Gradient and Avatar
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 24,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primary, AppColors.lavender],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.white.withOpacity(
+                                    0.2,
+                                  ),
+                                  child: Text(
+                                    (_userName != null && _userName!.isNotEmpty)
+                                        ? _userName![0].toUpperCase()
+                                        : 'U',
+                                    style: const TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _userName ?? 'User Profile',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _userPhone ?? 'No Phone Number',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.85),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Details Section
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          children: [
+                            _buildProfileDetailRow(
+                              icon: Icons.person_outline,
+                              label: "Full Name",
+                              value: _userName ?? 'Not specified',
+                            ),
+                            const Divider(height: 24),
+                            _buildProfileDetailRow(
+                              icon: Icons.phone_android,
+                              label: "Phone Number",
+                              value: _userPhone ?? 'Not specified',
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Action buttons
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: 20,
+                          left: 24,
+                          right: 24,
+                        ),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Close',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
-  
+
+  Widget _buildProfileDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool isCode = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppColors.primary, size: 22),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: isCode ? 'monospace' : null,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showHealthReminderSettings() {
     showModalBottomSheet(
       context: context,
@@ -384,7 +567,7 @@ class _HealthReminderSettingsSheetState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     if (_isLoading) {
       return const SizedBox(
         height: 200,
@@ -416,11 +599,15 @@ class _HealthReminderSettingsSheetState
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Title
               Row(
                 children: [
-                  Icon(Icons.health_and_safety, color: Colors.green[600], size: 28),
+                  Icon(
+                    Icons.health_and_safety,
+                    color: Colors.green[600],
+                    size: 28,
+                  ),
                   const SizedBox(width: 12),
                   const Text(
                     'Health Reminders',
@@ -434,7 +621,7 @@ class _HealthReminderSettingsSheetState
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
               const SizedBox(height: 24),
-              
+
               // Master toggle
               _buildToggleCard(
                 title: 'Enable Health Reminders',
@@ -447,9 +634,9 @@ class _HealthReminderSettingsSheetState
                 },
                 iconColor: Colors.green,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Interval selector
               Container(
                 padding: const EdgeInsets.all(16),
@@ -467,7 +654,10 @@ class _HealthReminderSettingsSheetState
                         const SizedBox(width: 12),
                         const Text(
                           'Reminder Interval',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
@@ -489,22 +679,36 @@ class _HealthReminderSettingsSheetState
                             }
                           : null,
                       onChangeEnd: (value) async {
-                        await HealthReminderService.setReminderInterval(value.toInt());
+                        await HealthReminderService.setReminderInterval(
+                          value.toInt(),
+                        );
                       },
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('15 min', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                        Text('2 hours', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                        Text(
+                          '15 min',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          '2 hours',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               Text(
                 'REMINDER TYPES',
                 style: TextStyle(
@@ -515,7 +719,7 @@ class _HealthReminderSettingsSheetState
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               // Water reminders
               _buildToggleCard(
                 title: 'Water Reminders',
@@ -525,12 +729,14 @@ class _HealthReminderSettingsSheetState
                 onChanged: _remindersEnabled
                     ? (value) async {
                         setState(() => _waterReminders = value);
-                        await HealthReminderService.setWaterRemindersEnabled(value);
+                        await HealthReminderService.setWaterRemindersEnabled(
+                          value,
+                        );
                       }
                     : null,
                 iconColor: Colors.blue,
               ),
-              
+
               // Posture reminders
               _buildToggleCard(
                 title: 'Posture Reminders',
@@ -540,12 +746,14 @@ class _HealthReminderSettingsSheetState
                 onChanged: _remindersEnabled
                     ? (value) async {
                         setState(() => _postureReminders = value);
-                        await HealthReminderService.setPostureRemindersEnabled(value);
+                        await HealthReminderService.setPostureRemindersEnabled(
+                          value,
+                        );
                       }
                     : null,
                 iconColor: Colors.purple,
               ),
-              
+
               // Eye break reminders
               _buildToggleCard(
                 title: 'Eye Break Reminders',
@@ -555,12 +763,14 @@ class _HealthReminderSettingsSheetState
                 onChanged: _remindersEnabled
                     ? (value) async {
                         setState(() => _eyeBreakReminders = value);
-                        await HealthReminderService.setEyeBreakRemindersEnabled(value);
+                        await HealthReminderService.setEyeBreakRemindersEnabled(
+                          value,
+                        );
                       }
                     : null,
                 iconColor: Colors.teal,
               ),
-              
+
               // Stretch reminders
               _buildToggleCard(
                 title: 'Stretch Reminders',
@@ -570,12 +780,14 @@ class _HealthReminderSettingsSheetState
                 onChanged: _remindersEnabled
                     ? (value) async {
                         setState(() => _stretchReminders = value);
-                        await HealthReminderService.setStretchRemindersEnabled(value);
+                        await HealthReminderService.setStretchRemindersEnabled(
+                          value,
+                        );
                       }
                     : null,
                 iconColor: Colors.orange,
               ),
-              
+
               // Wellness tips
               _buildToggleCard(
                 title: 'Wellness Tips',
@@ -585,14 +797,16 @@ class _HealthReminderSettingsSheetState
                 onChanged: _remindersEnabled
                     ? (value) async {
                         setState(() => _wellnessTips = value);
-                        await HealthReminderService.setWellnessTipsEnabled(value);
+                        await HealthReminderService.setWellnessTipsEnabled(
+                          value,
+                        );
                       }
                     : null,
                 iconColor: Colors.pink,
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Test button
               SizedBox(
                 width: double.infinity,
@@ -621,7 +835,7 @@ class _HealthReminderSettingsSheetState
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 40),
             ],
           ),
@@ -629,7 +843,7 @@ class _HealthReminderSettingsSheetState
       },
     );
   }
-  
+
   Widget _buildToggleCard({
     required String title,
     required String subtitle,
@@ -639,7 +853,7 @@ class _HealthReminderSettingsSheetState
     required Color iconColor,
   }) {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -665,7 +879,10 @@ class _HealthReminderSettingsSheetState
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                 ),
                 Text(
                   subtitle,

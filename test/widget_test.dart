@@ -13,7 +13,7 @@ import 'package:VHASS/main.dart';
 void main() {
   testWidgets('App splash screen smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(isLoggedIn: false));
 
     // Verify that the splash screen shows 'Syava AI' branding.
     expect(find.text('Syava AI'), findsOneWidget);

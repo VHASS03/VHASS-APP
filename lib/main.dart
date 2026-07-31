@@ -41,7 +41,9 @@ void main() async {
   // Request permissions on app startup
   await _requestPermissions();
 
-  runApp(const MyApp());
+  final isLoggedIn = await StorageService.isLoggedIn();
+
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 /// Initialize SOS alert service to receive alerts from contacts
@@ -120,7 +122,8 @@ Future<void> _prefetchEmergencyContacts() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  const MyApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +137,7 @@ class MyApp extends StatelessWidget {
           themeMode: currentMode,
           theme: appTheme(Brightness.light),
           darkTheme: appTheme(Brightness.dark),
-          home: const SplashScreen(),
+          home: isLoggedIn ? const HomeScreen() : const SplashScreen(),
           routes: {
             '/splash': (context) => const SplashScreen(),
             '/login': (context) => const LoginScreen(),

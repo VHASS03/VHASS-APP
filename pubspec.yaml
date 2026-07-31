@@ -72,6 +72,11 @@ dependencies:
   # Bluetooth connectivity for safety devices
   flutter_blue_plus: ^1.32.12
 
+  # Charts for wellness analytics
+  fl_chart: ^0.69.2
+
+  # File system access for exports
+  path_provider: ^2.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

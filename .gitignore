@@ -44,7 +44,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
 # Private signing credentials
 /android/key.properties
 /android/app/*.jks

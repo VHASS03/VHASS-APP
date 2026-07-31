@@ -5,6 +5,7 @@ import 'counselling_portal.dart';
 import 'resource_library.dart';
 import 'wellness_events.dart';
 import 'wellness_admin.dart';
+import '../../features/women_wellness_tracker/wellness_tracker_screen.dart';
 
 class WellnessHubScreen extends StatelessWidget {
   const WellnessHubScreen({super.key});
@@ -83,6 +84,18 @@ class WellnessHubScreen extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
+              _buildHubCard(
+                context: context,
+                title: "Women's Wellness Tracker",
+                subtitle:
+                    "Access menstrual cycle logs, symptom logs, personalized exercises, and diet advice.",
+                icon: Icons.favorite,
+                color: AppColors.blush,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WellnessTrackerScreen()),
+                ),
+              ),
               // Hub Options List
               _buildHubCard(
                 context: context,
@@ -129,18 +142,6 @@ class WellnessHubScreen extends StatelessWidget {
                 ),
               ),
 
-              _buildHubCard(
-                context: context,
-                title: "Women's Wellness Tracker",
-                subtitle:
-                    "Access menstrual cycle logs, symptom logs, personalized exercises, and diet advice.",
-                icon: Icons.favorite,
-                color: AppColors.blush,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WellnessScreen()),
-                ),
-              ),
             ],
           ),
         ),
