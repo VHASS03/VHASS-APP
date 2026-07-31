@@ -73,6 +73,13 @@ android {
             )
         }
     }
+
+    packaging {
+        jniLibs {
+            keepDebugSymbols.add("**/libonnxruntime.so")
+            keepDebugSymbols.add("**/libflutter.so")
+        }
+    }
 }
 
 // Omit Minew Kotlin sources until MTBeaconPlus.aar is present (avoid android.sourceSets `java` DSL clash).

@@ -18,5 +18,8 @@ void main() {
     // Verify that the splash screen shows 'Syava AI' branding.
     expect(find.text('Syava AI'), findsOneWidget);
     expect(find.text('powered by VHASS'), findsOneWidget);
+
+    // Let the splash screen transition timer complete to avoid pending timer exception
+    await tester.pump(const Duration(seconds: 3));
   });
 }
