@@ -1,4 +1,4 @@
-package com.example.my_app.minew
+package com.syava.ai.minew
 
 import android.content.Context
 import android.os.Handler
@@ -40,9 +40,9 @@ import java.util.Collections
  */
 object MinewBeaconPlusPlugin {
     private const val TAG = "MinewBeaconPlus"
-    private const val METHOD_CHANNEL = "com.example.my_app/minew_beacon_plus"
-    private const val EVENT_CHANNEL = "com.example.my_app/minew_beacon_plus/events"
-    private const val CONNECTION_EVENT_CHANNEL = "com.example.my_app/minew_beacon_plus/connection_events"
+    private const val METHOD_CHANNEL = "com.syava.ai/minew_beacon_plus"
+    private const val EVENT_CHANNEL = "com.syava.ai/minew_beacon_plus/events"
+    private const val CONNECTION_EVENT_CHANNEL = "com.syava.ai/minew_beacon_plus/connection_events"
 
     private val mainHandler = Handler(Looper.getMainLooper())
     /** SDK caches peripherals during scan; we mirror the latest list for connect-by-mac. */

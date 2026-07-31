@@ -28,7 +28,7 @@ import '../config/api_config.dart';
 /// - Smart wake word (new): ~5-8% per hour
 class WakeWordService {
   static const MethodChannel _channel = MethodChannel(
-    'com.example.my_app/wake_word',
+    'com.syava.ai/wake_word',
   );
 
   /// Start wake word detection service

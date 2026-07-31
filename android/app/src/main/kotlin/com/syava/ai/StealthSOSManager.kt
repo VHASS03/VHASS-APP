@@ -1,4 +1,4 @@
-package com.example.my_app
+package com.syava.ai
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -96,7 +96,7 @@ class StealthSOSManager(private val context: Context) {
     // Broadcast receivers for confirm/cancel
     private val confirmReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.example.my_app.CONFIRM_SOS") {
+            if (intent?.action == "com.syava.ai.CONFIRM_SOS") {
                 Log.d(TAG, "✅ SOS CONFIRMED - triggering emergency!")
                 isWaitingForConfirmation = false
                 executeSOS()
@@ -106,7 +106,7 @@ class StealthSOSManager(private val context: Context) {
     
     private val cancelReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.example.my_app.CANCEL_SOS") {
+            if (intent?.action == "com.syava.ai.CANCEL_SOS") {
                 Log.d(TAG, "❌ SOS CANCELLED by user")
                 cancelSOS()
             }
@@ -185,12 +185,12 @@ class StealthSOSManager(private val context: Context) {
         // Register broadcast receivers
         context.registerReceiver(
             confirmReceiver,
-            IntentFilter("com.example.my_app.CONFIRM_SOS"),
+            IntentFilter("com.syava.ai.CONFIRM_SOS"),
             Context.RECEIVER_NOT_EXPORTED
         )
         context.registerReceiver(
             cancelReceiver,
-            IntentFilter("com.example.my_app.CANCEL_SOS"),
+            IntentFilter("com.syava.ai.CANCEL_SOS"),
             Context.RECEIVER_NOT_EXPORTED
         )
         
@@ -375,7 +375,7 @@ class StealthSOSManager(private val context: Context) {
     
     private fun closeFakeShutdown() {
         mainHandler.post {
-            context.sendBroadcast(Intent("com.example.my_app.CLOSE_FAKE_SHUTDOWN"))
+            context.sendBroadcast(Intent("com.syava.ai.CLOSE_FAKE_SHUTDOWN"))
         }
     }
     
@@ -513,7 +513,7 @@ class StealthSOSManager(private val context: Context) {
             // Close the overlay service
             StealthOverlayService.hideOverlay(context)
             // Also send broadcast for activity-based overlay (fallback)
-            val intent = Intent("com.example.my_app.CLOSE_STEALTH_OVERLAY")
+            val intent = Intent("com.syava.ai.CLOSE_STEALTH_OVERLAY")
             context.sendBroadcast(intent)
         }
     }

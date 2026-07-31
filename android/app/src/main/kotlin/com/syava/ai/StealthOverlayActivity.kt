@@ -1,4 +1,4 @@
-package com.example.my_app
+package com.syava.ai
 
 import android.app.Activity
 import android.content.BroadcastReceiver
@@ -80,7 +80,7 @@ class StealthOverlayActivity : Activity() {
     
     private val closeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.example.my_app.CLOSE_STEALTH_OVERLAY") {
+            if (intent?.action == "com.syava.ai.CLOSE_STEALTH_OVERLAY") {
                 finish()
             }
         }
@@ -148,7 +148,7 @@ class StealthOverlayActivity : Activity() {
         // Register receiver to close overlay
         registerReceiver(
             closeReceiver,
-            IntentFilter("com.example.my_app.CLOSE_STEALTH_OVERLAY"),
+            IntentFilter("com.syava.ai.CLOSE_STEALTH_OVERLAY"),
             RECEIVER_NOT_EXPORTED
         )
         
@@ -221,7 +221,7 @@ class StealthOverlayActivity : Activity() {
                     StealthSOSManager.confirmAndExecuteSOS()
                     
                     // Also send broadcast as fallback
-                    sendBroadcast(Intent("com.example.my_app.CONFIRM_SOS"))
+                    sendBroadcast(Intent("com.syava.ai.CONFIRM_SOS"))
                     
                     println("[StealthOverlay] 🚨 Countdown finished - SOS CONFIRMED - CALLS STARTING NOW!")
                 }
@@ -327,7 +327,7 @@ class StealthOverlayActivity : Activity() {
         StealthSOSManager.cancelCurrentSOS()
         
         // Also send broadcast as fallback
-        sendBroadcast(Intent("com.example.my_app.CANCEL_SOS"))
+        sendBroadcast(Intent("com.syava.ai.CANCEL_SOS"))
         
         // Close overlay after brief delay
         handler.postDelayed({

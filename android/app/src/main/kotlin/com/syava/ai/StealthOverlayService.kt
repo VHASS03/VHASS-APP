@@ -1,4 +1,4 @@
-package com.example.my_app
+package com.syava.ai
 
 import android.app.*
 import android.content.BroadcastReceiver
@@ -39,9 +39,9 @@ class StealthOverlayService : Service() {
         const val NOTIFICATION_ID = 2001
         const val CHANNEL_ID = "stealth_overlay_channel"
         
-        const val ACTION_SHOW_OVERLAY = "com.example.my_app.SHOW_STEALTH_OVERLAY"
-        const val ACTION_HIDE_OVERLAY = "com.example.my_app.HIDE_STEALTH_OVERLAY"
-        const val ACTION_SHOW_COUNTDOWN = "com.example.my_app.SHOW_COUNTDOWN"
+        const val ACTION_SHOW_OVERLAY = "com.syava.ai.SHOW_STEALTH_OVERLAY"
+        const val ACTION_HIDE_OVERLAY = "com.syava.ai.HIDE_STEALTH_OVERLAY"
+        const val ACTION_SHOW_COUNTDOWN = "com.syava.ai.SHOW_COUNTDOWN"
         
         const val COUNTDOWN_SECONDS = 5
         
@@ -97,7 +97,7 @@ class StealthOverlayService : Service() {
     private val closeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                "com.example.my_app.CLOSE_STEALTH_OVERLAY" -> {
+                "com.syava.ai.CLOSE_STEALTH_OVERLAY" -> {
                     removeOverlay()
                     stopSelf()
                 }
@@ -124,7 +124,7 @@ class StealthOverlayService : Service() {
         
         // Register receivers (volume buttons removed - not secure enough)
         val filter = IntentFilter().apply {
-            addAction("com.example.my_app.CLOSE_STEALTH_OVERLAY")
+            addAction("com.syava.ai.CLOSE_STEALTH_OVERLAY")
         }
         registerReceiver(closeReceiver, filter, RECEIVER_NOT_EXPORTED)
         
@@ -315,7 +315,7 @@ class StealthOverlayService : Service() {
                     StealthSOSManager.confirmAndExecuteSOS()
                     
                     // Also send broadcast as fallback
-                    sendBroadcast(Intent("com.example.my_app.CONFIRM_SOS"))
+                    sendBroadcast(Intent("com.syava.ai.CONFIRM_SOS"))
                     Log.d(TAG, "🚨 Countdown finished - SOS CONFIRMED - CALLS STARTING NOW!")
                 }
             }
@@ -409,7 +409,7 @@ class StealthOverlayService : Service() {
         StealthSOSManager.cancelCurrentSOS()
         
         // Also send broadcast as fallback
-        sendBroadcast(Intent("com.example.my_app.CANCEL_SOS"))
+        sendBroadcast(Intent("com.syava.ai.CANCEL_SOS"))
         
         handler.postDelayed({
             removeOverlay()

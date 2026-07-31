@@ -16,7 +16,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
   bool _isLoading = false;
 
   // Native method channel for automatic calls
-  static const platform = MethodChannel('com.example.my_app/dialer');
+  static const platform = MethodChannel('com.syava.ai/dialer');
 
   @override
   void initState() {

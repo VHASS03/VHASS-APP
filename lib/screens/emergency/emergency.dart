@@ -27,7 +27,7 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
   late StreamSubscription<BatteryState> _batterySubscription;
 
   // Native method channel for automatic calls
-  static const platform = MethodChannel('com.example.my_app/dialer');
+  static const platform = MethodChannel('com.syava.ai/dialer');
 
   // --- STOPWATCH VARIABLES ---
   Timer? _timer;

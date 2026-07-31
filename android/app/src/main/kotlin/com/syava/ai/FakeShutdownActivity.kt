@@ -1,4 +1,4 @@
-package com.example.my_app
+package com.syava.ai
 
 import android.app.Activity
 import android.content.BroadcastReceiver
@@ -61,7 +61,7 @@ class FakeShutdownActivity : Activity() {
     
     private val closeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.example.my_app.CLOSE_FAKE_SHUTDOWN") {
+            if (intent?.action == "com.syava.ai.CLOSE_FAKE_SHUTDOWN") {
                 finish()
             }
         }
@@ -87,7 +87,7 @@ class FakeShutdownActivity : Activity() {
         // Register receiver
         registerReceiver(
             closeReceiver,
-            IntentFilter("com.example.my_app.CLOSE_FAKE_SHUTDOWN"),
+            IntentFilter("com.syava.ai.CLOSE_FAKE_SHUTDOWN"),
             RECEIVER_NOT_EXPORTED
         )
     }

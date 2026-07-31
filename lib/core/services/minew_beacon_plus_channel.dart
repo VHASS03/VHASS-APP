@@ -12,13 +12,13 @@ class MinewBeaconPlusChannel {
   MinewBeaconPlusChannel._();
 
   static const MethodChannel _method = MethodChannel(
-    'com.example.my_app/minew_beacon_plus',
+    'com.syava.ai/minew_beacon_plus',
   );
   static const EventChannel _events = EventChannel(
-    'com.example.my_app/minew_beacon_plus/events',
+    'com.syava.ai/minew_beacon_plus/events',
   );
   static const EventChannel _connectionEvents = EventChannel(
-    'com.example.my_app/minew_beacon_plus/connection_events',
+    'com.syava.ai/minew_beacon_plus/connection_events',
   );
 
   static bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;

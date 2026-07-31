@@ -1,4 +1,4 @@
-package com.example.my_app
+package com.syava.ai
 
 import android.content.BroadcastReceiver
 import android.content.Context

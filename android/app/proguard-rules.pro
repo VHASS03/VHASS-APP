@@ -3,3 +3,13 @@
 
 -keep public class com.minew.beaconplus.sdk.** { *; }
 -keep public class no.nordicsemi.android.** { *; }
+
+# ONNX Runtime rules
+-keep class ai.onnxruntime.** { *; }
+-keep class com.microsoft.onnxruntime.** { *; }
+
+# Google Maps rules
+-dontwarn io.flutter.plugins.googlemaps.**
+-keep class io.flutter.plugins.googlemaps.** { *; }
+
+

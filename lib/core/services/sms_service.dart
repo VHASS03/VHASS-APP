@@ -4,7 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 /// SMS Service - Send actual SMS from device
 /// No third-party APIs needed - uses Android native SMS
 class SMSService {
-  static const platform = MethodChannel('com.example.my_app/sms');
+  static const platform = MethodChannel('com.syava.ai/sms');
 
   /// Request SMS permission at runtime (Android)
   static Future<bool> requestSMSPermission() async {

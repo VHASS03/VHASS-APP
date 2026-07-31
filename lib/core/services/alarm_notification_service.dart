@@ -17,7 +17,7 @@ class AlarmNotificationService {
       FlutterLocalNotificationsPlugin();
 
   static const MethodChannel _channel = MethodChannel(
-    'com.example.my_app/alarm',
+    'com.syava.ai/alarm',
   );
 
   static bool _isInitialized = false;

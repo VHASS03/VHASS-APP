@@ -7,7 +7,7 @@ import '../config/api_config.dart';
 /// Starts Android foreground service that listens even when app is closed
 class BackgroundVoiceService {
   static const MethodChannel _channel = MethodChannel(
-    'com.example.my_app/voice_service',
+    'com.syava.ai/voice_service',
   );
 
   /// Start background voice monitoring service

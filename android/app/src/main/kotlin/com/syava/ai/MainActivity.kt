@@ -1,4 +1,4 @@
-package com.example.my_app
+package com.syava.ai
 
 import android.content.Intent
 import android.net.Uri
@@ -10,11 +10,11 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
-    private val DIALER_CHANNEL = "com.example.my_app/dialer"
-    private val SMS_CHANNEL = "com.example.my_app/sms"
-    private val VOICE_SERVICE_CHANNEL = "com.example.my_app/voice_service"
-    private val WAKE_WORD_CHANNEL = "com.example.my_app/wake_word"
-    private val ALARM_CHANNEL = "com.example.my_app/alarm"
+    private val DIALER_CHANNEL = "com.syava.ai/dialer"
+    private val SMS_CHANNEL = "com.syava.ai/sms"
+    private val VOICE_SERVICE_CHANNEL = "com.syava.ai/voice_service"
+    private val WAKE_WORD_CHANNEL = "com.syava.ai/wake_word"
+    private val ALARM_CHANNEL = "com.syava.ai/alarm"
     
     // Alarm service instance
     private var alarmService: AlarmService? = null
@@ -141,10 +141,10 @@ class MainActivity : FlutterFragmentActivity() {
         tryRegisterMinewBeaconPlus(flutterEngine)
     }
 
-    /** Loads [com.example.my_app.minew.MinewBeaconPlusPlugin] via reflection so the project builds without the vendor AAR. */
+    /** Loads [com.syava.ai.minew.MinewBeaconPlusPlugin] via reflection so the project builds without the vendor AAR. */
     private fun tryRegisterMinewBeaconPlus(flutterEngine: FlutterEngine) {
         try {
-            val clazz = Class.forName("com.example.my_app.minew.MinewBeaconPlusPlugin")
+            val clazz = Class.forName("com.syava.ai.minew.MinewBeaconPlusPlugin")
             val m = clazz.getMethod("registerWith", FlutterEngine::class.java, Context::class.java)
             m.invoke(null, flutterEngine, this)
         } catch (_: Throwable) {

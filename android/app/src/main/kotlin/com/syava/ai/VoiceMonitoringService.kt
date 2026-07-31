@@ -1,4 +1,4 @@
-package com.example.my_app
+package com.syava.ai
 
 import android.app.*
 import android.content.Context

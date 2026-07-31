@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 
 class DialerService {
-  static const platform = MethodChannel('com.example.my_app/dialer');
+  static const platform = MethodChannel('com.syava.ai/dialer');
 
   /// Initiate a call using native Android intent
   static Future<bool> makeCall(String phoneNumber) async {
