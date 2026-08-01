@@ -79,8 +79,7 @@ android {
 
     packaging {
         jniLibs {
-            keepDebugSymbols.add("**/libonnxruntime.so")
-            keepDebugSymbols.add("**/libflutter.so")
+            doNotStrip.add("**/*.so")
         }
     }
 }
@@ -108,7 +107,7 @@ flutter {
 }
 
 tasks.configureEach {
-    if (name == "stripReleaseDebugSymbols") {
+    if (name.contains("strip", ignoreCase = true)) {
         enabled = false
     }
 }
