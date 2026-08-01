@@ -106,3 +106,9 @@ dependencies {
 flutter {
     source = "../.."
 }
+
+tasks.configureEach {
+    if (name == "stripReleaseDebugSymbols") {
+        enabled = false
+    }
+}
