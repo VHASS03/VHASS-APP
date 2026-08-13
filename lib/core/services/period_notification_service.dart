@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'wellness_service.dart';
 import 'storage_service.dart';
+import '../../features/women_wellness_tracker/services/wellness_tracker_service.dart';
 
 /// Period Notification Service
 /// Provides consoling messages, advice, and self-care tips during menstrual periods
@@ -149,9 +150,26 @@ class PeriodNotificationService {
         return;
       }
 
+      final notificationsEnabled = await StorageService.areNotificationsEnabled();
+      if (!notificationsEnabled) {
+        print('ℹ️ Notifications disabled in settings');
+        return;
+      }
+
+      final isOnboarded = await WellnessTrackerService.isOnboarded();
+      if (!isOnboarded) {
+        print('ℹ️ Wellness tracker onboarding not done. Skipping automatic notifications.');
+        return;
+      }
+
       final wellnessData = await WellnessService.loadUserWellnessData(userId);
-      final lastPeriodDate = wellnessData['lastPeriodDate'] as DateTime;
-      final periodLength = wellnessData['periodLength'] as int;
+      final lastPeriodDate = wellnessData['lastPeriodDate'] as DateTime?;
+      if (lastPeriodDate == null) {
+        print('ℹ️ No explicit last period date set. Skipping automatic notifications.');
+        return;
+      }
+
+      final periodLength = (wellnessData['periodLength'] as int?) ?? 5;
 
       final today = DateTime.now();
       final daysSinceLastPeriod = DateTime(today.year, today.month, today.day)

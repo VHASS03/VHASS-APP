@@ -15,6 +15,7 @@ import contactsRoutes from './routes/contacts';
 import deviceRoutes from './routes/device';
 import voiceRoutes from './routes/voice';
 import chatRoutes from './routes/chat';
+import wellnessRoutes from './routes/wellness';
 
 const app: Express = express();
 const httpServer = createServer(app);
@@ -40,6 +41,7 @@ app.use('/api/contacts', contactsRoutes);
 app.use('/api/device', deviceRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/wellness', wellnessRoutes);
 
 // PUBLIC Live Tracking Route (no /api prefix - for cleaner SMS links)
 // Redirect /track/:sosId to /api/sos/track/:sosId

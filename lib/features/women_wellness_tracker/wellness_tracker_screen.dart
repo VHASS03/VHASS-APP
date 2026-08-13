@@ -6,6 +6,7 @@ import 'screens/daily_log_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/insights_screen.dart';
 import 'screens/tracker_settings_screen.dart';
+import 'services/wellness_tracker_service.dart';
 
 /// Entry point for the Women Wellness Tracker module.
 ///
@@ -27,6 +28,19 @@ class _WellnessTrackerScreenState extends State<WellnessTrackerScreen> {
     DailyLogScreen(),
     AnalyticsScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBackendData();
+  }
+
+  Future<void> _loadBackendData() async {
+    await WellnessTrackerService.fetchFromBackend();
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

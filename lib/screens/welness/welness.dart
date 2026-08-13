@@ -5,6 +5,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'yoga_pose_screen.dart';
 import 'yoga_pose_data.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/wellness_service.dart';
+import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/colors.dart';
 import '../chat_screen.dart';
@@ -81,6 +83,29 @@ class _WellnessScreenState extends State<WellnessScreen> {
     await prefs.setInt('wellness_cycle_length', _cycleLength);
     await prefs.setString(
         'wellness_last_period', _lastPeriodDate.toIso8601String());
+
+    final userId = await StorageService.getUserId();
+    if (userId != null && userId.isNotEmpty) {
+      await WellnessService.saveAllWellnessData(
+        userId,
+        _lastPeriodDate,
+        _cycleLength,
+        _periodLength,
+        _notes,
+      );
+    }
+
+    try {
+      await ApiService.put('/wellness/settings', {
+        'cycleLength': _cycleLength,
+        'periodLength': _periodLength,
+        'lastPeriodDate': _lastPeriodDate.toIso8601String(),
+        'healthCondition': _healthCondition,
+        'setupDone': true,
+      });
+    } catch (e) {
+      print('⚠️ Error syncing wellness setup to backend: $e');
+    }
   }
 
   // ─── CYCLE CALCULATIONS ──────────────────

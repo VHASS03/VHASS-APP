@@ -311,22 +311,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showProfileDialog() {
-    showGeneralDialog(
+    final nameController = TextEditingController(text: _userName ?? '');
+    final phoneController = TextEditingController(text: _userPhone ?? '');
+    bool isEditing = false;
+    bool isSaving = false;
+
+    showDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: "ProfileDetails",
-      barrierColor: Colors.black.withOpacity(0.6),
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, anim1, anim2) {
-        return const SizedBox.shrink();
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        final curve = CurvedAnimation(parent: anim1, curve: Curves.easeOutBack);
-        return ScaleTransition(
-          scale: curve,
-          child: FadeTransition(
-            opacity: anim1,
-            child: AlertDialog(
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
               ),
@@ -336,134 +332,333 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.85,
                   decoration: BoxDecoration(color: Theme.of(context).cardColor),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Header with Gradient and Avatar
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 24,
-                          horizontal: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.primary, AppColors.lavender],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header with Gradient and Avatar
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 24,
+                            horizontal: 16,
+                          ),
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.primary, AppColors.lavender],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 3,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.15),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 40,
+                                    backgroundColor: Colors.white.withOpacity(0.2),
+                                    child: Text(
+                                      (nameController.text.isNotEmpty)
+                                          ? nameController.text[0].toUpperCase()
+                                          : 'U',
+                                      style: const TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  nameController.text.isNotEmpty
+                                      ? nameController.text
+                                      : 'User Profile',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  phoneController.text.isNotEmpty
+                                      ? phoneController.text
+                                      : 'No Phone Number',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.85),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.15),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
+
+                        // Body section: view mode or edit mode
+                        Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: isEditing
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "Full Name",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: nameController,
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(Icons.person_outline),
+                                        hintText: "Enter full name",
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      "Phone Number",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: phoneController,
+                                      keyboardType: TextInputType.phone,
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(Icons.phone_android),
+                                        hintText: "10-digit phone number",
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  children: [
+                                    _buildProfileDetailRow(
+                                      icon: Icons.person_outline,
+                                      label: "Full Name",
+                                      value: nameController.text.isNotEmpty
+                                          ? nameController.text
+                                          : 'Not specified',
+                                    ),
+                                    const Divider(height: 24),
+                                    _buildProfileDetailRow(
+                                      icon: Icons.phone_android,
+                                      label: "Phone Number",
+                                      value: phoneController.text.isNotEmpty
+                                          ? phoneController.text
+                                          : 'Not specified',
                                     ),
                                   ],
                                 ),
-                                child: CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor: Colors.white.withOpacity(
-                                    0.2,
+                        ),
+
+                        // Action buttons
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: 20,
+                            left: 24,
+                            right: 24,
+                          ),
+                          child: Row(
+                            children: [
+                              if (isEditing) ...[
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: isSaving
+                                        ? null
+                                        : () {
+                                            setModalState(() {
+                                              isEditing = false;
+                                              nameController.text = _userName ?? '';
+                                              phoneController.text = _userPhone ?? '';
+                                            });
+                                          },
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text('Cancel'),
                                   ),
-                                  child: Text(
-                                    (_userName != null && _userName!.isNotEmpty)
-                                        ? _userName![0].toUpperCase()
-                                        : 'U',
-                                    style: const TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: isSaving
+                                        ? null
+                                        : () async {
+                                            final newName = nameController.text.trim();
+                                            final newPhone = phoneController.text.trim();
+
+                                            if (newName.isEmpty) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Name cannot be empty'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+                                            if (newPhone.length != 10) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Phone number must be 10 digits'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+
+                                            setModalState(() => isSaving = true);
+
+                                            try {
+                                              final response = await AuthService.updateProfile(
+                                                name: newName,
+                                                phone: newPhone,
+                                              );
+
+                                              await StorageService.setUserName(newName);
+                                              await StorageService.setPhone(newPhone);
+
+                                              setState(() {
+                                                _userName = newName;
+                                                _userPhone = newPhone;
+                                              });
+
+                                              if (mounted) {
+                                                Navigator.pop(context);
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      response.message ?? 'Profile updated successfully',
+                                                    ),
+                                                    backgroundColor: Colors.green,
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error updating profile: $e'),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                              }
+                                            } finally {
+                                              setModalState(() => isSaving = false);
+                                            }
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: isSaving
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Save',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ] else ...[
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      setModalState(() => isEditing = true);
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.edit, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Edit Profile'),
+                                      ],
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _userName ?? 'User Profile',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Close',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _userPhone ?? 'No Phone Number',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.85),
-                                  fontSize: 14,
-                                ),
-                              ),
+                              ],
                             ],
                           ),
                         ),
-                      ),
-                      // Details Section
-                      Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          children: [
-                            _buildProfileDetailRow(
-                              icon: Icons.person_outline,
-                              label: "Full Name",
-                              value: _userName ?? 'Not specified',
-                            ),
-                            const Divider(height: 24),
-                            _buildProfileDetailRow(
-                              icon: Icons.phone_android,
-                              label: "Phone Number",
-                              value: _userPhone ?? 'Not specified',
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Action buttons
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: 20,
-                          left: 24,
-                          right: 24,
-                        ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Close',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

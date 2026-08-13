@@ -79,6 +79,18 @@ class StorageService {
     return prefs.getString(_keyDeviceId);
   }
 
+  /// Set user phone
+  static Future<void> setPhone(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPhone, phone);
+  }
+
+  /// Set user name
+  static Future<void> setUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyName, name);
+  }
+
   /// Get user phone
   static Future<String?> getPhone() async {
     final prefs = await SharedPreferences.getInstance();

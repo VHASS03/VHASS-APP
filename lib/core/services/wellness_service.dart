@@ -124,9 +124,7 @@ class WellnessService {
   static Future<Map<String, dynamic>> loadUserWellnessData(
     String userId,
   ) async {
-    final lastPeriodDate =
-        await getLastPeriodDate(userId) ??
-        DateTime.now().subtract(const Duration(days: 2)); // Default
+    final lastPeriodDate = await getLastPeriodDate(userId);
     final cycleLength = await getCycleLength(userId);
     final periodLength = await getPeriodLength(userId);
     final healthNotes = await getHealthNotes(userId);

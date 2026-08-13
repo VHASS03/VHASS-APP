@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/api_service.dart';
 import '../constants/wellness_constants.dart';
 import '../models/period_log.dart';
 import '../models/daily_log.dart';
@@ -9,9 +10,9 @@ import '../models/wellness_settings.dart';
 
 /// Core data service for the Women Wellness Tracker.
 ///
-/// All data is scoped to the logged-in user via [StorageService.getUserId].
-/// Uses SharedPreferences for offline-first storage, following the same
-/// pattern as the existing [WellnessService].
+/// Scoped to the logged-in user via [StorageService.getUserId].
+/// Uses SharedPreferences for offline-first storage and automatically
+/// syncs with the Node.js backend (/api/wellness).
 class WellnessTrackerService {
   WellnessTrackerService._();
   static final WellnessTrackerService _instance = WellnessTrackerService._();
@@ -22,6 +23,77 @@ class WellnessTrackerService {
   /// Get the current user's ID. Returns empty string if not logged in.
   static Future<String> _userId() async {
     return await StorageService.getUserId() ?? '';
+  }
+
+  // ─── BACKEND SYNC ──────────────────────────
+
+  /// Fetch full wellness profile from backend and update local cache.
+  static Future<void> fetchFromBackend() async {
+    try {
+      final response = await ApiService.get<Map<String, dynamic>>('/wellness');
+      if (response.success && response.data != null && response.data!['data'] != null) {
+        final data = response.data!['data'] as Map<String, dynamic>;
+        final uid = await _userId();
+        if (uid.isEmpty) return;
+
+        final prefs = await SharedPreferences.getInstance();
+
+        // 1. Settings
+        final settings = WellnessSettings(
+          cycleLength: data['cycleLength'] ?? 28,
+          periodLength: data['periodLength'] ?? 5,
+          lastPeriodDate: data['lastPeriodDate'] != null ? DateTime.tryParse(data['lastPeriodDate']) : null,
+          healthCondition: data['healthCondition'] ?? 'None',
+        );
+        await prefs.setString('${WellnessKeys.settings}$uid', jsonEncode(settings.toJson()));
+        if (data['setupDone'] == true) {
+          await prefs.setBool('${WellnessKeys.onboarded}$uid', true);
+        }
+
+        // 2. Period Logs
+        if (data['periodLogs'] != null) {
+          final List<dynamic> pLogs = data['periodLogs'];
+          final parsedPeriodLogs = pLogs.map((e) => PeriodLog(
+            date: DateTime.parse(e['date']),
+            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate']) : null,
+            flow: e['flow'] ?? 'medium',
+            symptoms: List<String>.from(e['symptoms'] ?? []),
+            notes: e['notes'] ?? '',
+          )).toList();
+          await prefs.setString('${WellnessKeys.periodLogs}$uid', jsonEncode(parsedPeriodLogs.map((l) => l.toJson()).toList()));
+        }
+
+        // 3. Daily Logs
+        if (data['dailyLogs'] != null) {
+          final List<dynamic> dLogs = data['dailyLogs'];
+          final parsedDailyLogs = dLogs.map((e) => DailyLog(
+            date: DateTime.parse(e['date']),
+            mood: e['mood'],
+            energyLevel: e['energyLevel'] != null ? (e['energyLevel'] as num).toInt() : null,
+            symptoms: List<String>.from(e['symptoms'] ?? []),
+            notes: e['notes'] ?? '',
+            waterIntake: e['waterIntake'] != null ? (e['waterIntake'] as num).toInt() : 0,
+          )).toList();
+          await prefs.setString('${WellnessKeys.dailyLogs}$uid', jsonEncode(parsedDailyLogs.map((l) => l.toJson()).toList()));
+        }
+
+        // 4. Cycle History
+        if (data['cycleHistory'] != null) {
+          final List<dynamic> cHistory = data['cycleHistory'];
+          final parsedCycles = cHistory.map((e) => CycleData(
+            startDate: DateTime.parse(e['startDate']),
+            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate']) : null,
+            cycleLength: e['cycleLength'] ?? 28,
+            periodLength: e['periodLength'] ?? 5,
+          )).toList();
+          await prefs.setString('${WellnessKeys.cycleHistory}$uid', jsonEncode(parsedCycles.map((c) => c.toJson()).toList()));
+        }
+
+        print('✅ [WWT] Fetched and updated wellness data from backend');
+      }
+    } catch (e) {
+      print('⚠️ [WWT] Backend fetch failed, falling back to local storage: $e');
+    }
   }
 
   // ─── PERIOD LOGS ───────────────────────────
@@ -59,6 +131,19 @@ class WellnessTrackerService {
     logs.removeWhere((l) => _dateKey(l.date) == dateKey);
     logs.add(log);
     await savePeriodLogs(logs);
+
+    // Sync to backend
+    try {
+      await ApiService.post('/wellness/period-log', {
+        'date': log.date.toIso8601String(),
+        'endDate': log.endDate?.toIso8601String(),
+        'flow': log.flow,
+        'symptoms': log.symptoms,
+        'notes': log.notes,
+      });
+    } catch (e) {
+      print('⚠️ [WWT] Async backend period log sync error: $e');
+    }
   }
 
   /// Delete a period log for a specific date.
@@ -67,6 +152,13 @@ class WellnessTrackerService {
     final dateKey = _dateKey(date);
     logs.removeWhere((l) => _dateKey(l.date) == dateKey);
     await savePeriodLogs(logs);
+
+    // Sync to backend
+    try {
+      await ApiService.delete('/wellness/period-log/${_dateKey(date)}');
+    } catch (e) {
+      print('⚠️ [WWT] Async backend period log delete error: $e');
+    }
   }
 
   /// Get period log for a specific date.
@@ -115,6 +207,20 @@ class WellnessTrackerService {
     logs.removeWhere((l) => _dateKey(l.date) == dateKey);
     logs.add(log);
     await saveDailyLogs(logs);
+
+    // Sync to backend
+    try {
+      await ApiService.post('/wellness/daily-log', {
+        'date': log.date.toIso8601String(),
+        'mood': log.mood,
+        'energyLevel': log.energyLevel,
+        'symptoms': log.symptoms,
+        'notes': log.notes,
+        'waterIntake': log.waterIntake,
+      });
+    } catch (e) {
+      print('⚠️ [WWT] Async backend daily log sync error: $e');
+    }
   }
 
   /// Get daily log for a specific date.
@@ -189,6 +295,18 @@ class WellnessTrackerService {
       '${WellnessKeys.settings}$uid',
       jsonEncode(settings.toJson()),
     );
+
+    // Sync settings to backend
+    try {
+      await ApiService.put('/wellness/settings', {
+        'cycleLength': settings.cycleLength,
+        'periodLength': settings.periodLength,
+        'lastPeriodDate': settings.lastPeriodDate?.toIso8601String(),
+        'healthCondition': settings.healthCondition,
+      });
+    } catch (e) {
+      print('⚠️ [WWT] Async backend settings sync error: $e');
+    }
   }
 
   // ─── ONBOARDING ────────────────────────────
@@ -207,6 +325,15 @@ class WellnessTrackerService {
     if (uid.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('${WellnessKeys.onboarded}$uid', value);
+
+    // Sync onboarding state to backend
+    try {
+      await ApiService.put('/wellness/settings', {
+        'setupDone': value,
+      });
+    } catch (e) {
+      print('⚠️ [WWT] Async backend onboarding sync error: $e');
+    }
   }
 
   // ─── DATA MANAGEMENT ──────────────────────

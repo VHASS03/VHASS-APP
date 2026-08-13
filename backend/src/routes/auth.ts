@@ -11,6 +11,7 @@ import { sendSms } from '../utils/sms';
 import { generateToken } from '../utils/jwt';
 import Log from '../models/Log';
 import { LogType } from '../types';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -469,12 +470,100 @@ router.post(
           deviceType: device.deviceType,
         },
       });
-    } catch (error: any) {
-      console.error('Verify OTP error:', error);
-      res.status(500).json({ success: false, message: 'Server error' });
+/**
+ * GET /api/auth/profile
+ * Get authenticated user profile details
+ */
+router.get('/profile', authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
     }
+
+    const user = await User.findById(userId).select('-sosPIN');
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        phone: user.phone,
+        name: user.name || '',
+        email: user.email || '',
+        age: user.age,
+        occupation: user.occupation || '',
+      },
+    });
+  } catch (error: any) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
-);
+});
+
+/**
+ * PUT /api/auth/profile
+ * Update authenticated user profile details (name, phone, email, age, occupation)
+ */
+router.put('/profile', authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const { name, phone, email, age, occupation } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    if (name !== undefined) user.name = name.trim();
+    if (phone !== undefined) {
+      const cleanPhone = phone.trim();
+      if (!/^[0-9]{10}$/.test(cleanPhone)) {
+        res.status(400).json({ success: false, message: 'Phone must be exactly 10 digits' });
+        return;
+      }
+      // Check if phone number is used by another user
+      const existingUser = await User.findOne({ phone: cleanPhone, _id: { $ne: userId } });
+      if (existingUser) {
+        res.status(400).json({ success: false, message: 'Phone number already in use by another account' });
+        return;
+      }
+      user.phone = cleanPhone;
+    }
+    if (email !== undefined) user.email = email.trim();
+    if (age !== undefined && age !== null && age !== '') user.age = Number(age);
+    if (occupation !== undefined) user.occupation = occupation.trim();
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        phone: user.phone,
+        name: user.name || '',
+        email: user.email || '',
+        age: user.age,
+        occupation: user.occupation || '',
+      },
+    });
+  } catch (error: any) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 export default router;
+
 

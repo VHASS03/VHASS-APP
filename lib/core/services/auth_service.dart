@@ -169,6 +169,29 @@ class AuthService {
     return response.success;
   }
 
+  /// Get profile details
+  static Future<ApiResponse<Map<String, dynamic>>> getProfile() async {
+    return await ApiService.get<Map<String, dynamic>>('/auth/profile');
+  }
+
+  /// Update user profile details
+  static Future<ApiResponse<Map<String, dynamic>>> updateProfile({
+    String? name,
+    String? phone,
+    String? email,
+    String? age,
+    String? occupation,
+  }) async {
+    final Map<String, dynamic> body = {};
+    if (name != null) body['name'] = name;
+    if (phone != null) body['phone'] = phone;
+    if (email != null) body['email'] = email;
+    if (age != null && age.isNotEmpty) body['age'] = age;
+    if (occupation != null) body['occupation'] = occupation;
+
+    return await ApiService.put<Map<String, dynamic>>('/auth/profile', body);
+  }
+
   /// Check if user is logged in
   static Future<bool> isLoggedIn() async {
     return await StorageService.isLoggedIn();
