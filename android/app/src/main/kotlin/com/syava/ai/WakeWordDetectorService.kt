@@ -3,7 +3,9 @@ package com.syava.ai
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -102,8 +104,12 @@ class WakeWordDetectorService : Service() {
                 scope = serviceScope
             )
             Log.i(TAG, "✅ openWakeWord Engine initialized successfully")
+            val prefs = getSharedPreferences("WakeWordDiagnostics", Context.MODE_PRIVATE)
+            prefs.edit().putString("last_error", "SUCCESS").apply()
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to initialize openWakeWord Engine: ${e.message}")
+            Log.e(TAG, "❌ Failed to initialize openWakeWord Engine: ${e.message}", e)
+            val prefs = getSharedPreferences("WakeWordDiagnostics", Context.MODE_PRIVATE)
+            prefs.edit().putString("last_error", "${e.javaClass.simpleName}: ${e.message}").apply()
         }
     }
     
@@ -112,7 +118,11 @@ class WakeWordDetectorService : Service() {
         
         // Start as foreground service
         val notification = createNotification()
-        startForeground(NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
         
         startAudioPipeline()
         

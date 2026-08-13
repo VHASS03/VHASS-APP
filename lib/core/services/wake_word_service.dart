@@ -102,6 +102,17 @@ class WakeWordService {
     }
   }
 
+  /// Get native wake word service diagnostics
+  static Future<String> getDiagnostics() async {
+    try {
+      final result = await _channel.invokeMethod('getWakeWordDiagnostics');
+      return result as String;
+    } catch (e) {
+      debugPrint('❌ Failed to get wake word diagnostics: $e');
+      return 'Failed to query diagnostics: $e';
+    }
+  }
+
   /// Check if service should be running (user preference)
   static Future<bool> isServiceEnabled() async {
     return await StorageService.getBool('wake_word_service_enabled') ?? false;

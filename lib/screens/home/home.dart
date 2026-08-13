@@ -189,27 +189,32 @@ class _HomeScreenState extends State<HomeScreen> {
         });
 
         if (isEnabled) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.mic, color: Colors.white, size: 20),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '✅ Voice listening is active — Say "help me out"',
+          final diagnostics = await WakeWordService.getDiagnostics();
+          debugPrint('🎙️ Wake Word Service Diagnostics: $diagnostics');
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.mic, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '✅ Voice listening active — Status: $diagnostics',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                backgroundColor: AppColors.mintAccent.withOpacity(0.85),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                duration: const Duration(seconds: 5),
               ),
-              backgroundColor: AppColors.mintAccent.withOpacity(0.85),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              duration: const Duration(seconds: 4),
-            ),
-          );
+            );
+          }
         }
       }
     } catch (e) {

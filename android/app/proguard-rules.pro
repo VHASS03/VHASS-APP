@@ -7,6 +7,12 @@
 -keep class ai.onnxruntime.** { *; }
 -keep class com.microsoft.onnxruntime.** { *; }
 
+# openWakeWord rules
+-keep class com.rementia.openwakeword.** { *; }
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
 # Google Maps rules
 -dontwarn io.flutter.plugins.googlemaps.**
 -keep class io.flutter.plugins.googlemaps.** { *; }

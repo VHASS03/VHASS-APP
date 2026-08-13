@@ -111,6 +111,11 @@ class MainActivity : FlutterFragmentActivity() {
                 "isWakeWordServiceRunning" -> {
                     result.success(WakeWordDetectorService.isRunning())
                 }
+                "getWakeWordDiagnostics" -> {
+                    val prefs = getSharedPreferences("WakeWordDiagnostics", Context.MODE_PRIVATE)
+                    val status = prefs.getString("last_error", "Not initialized yet")
+                    result.success(status)
+                }
                 else -> result.notImplemented()
             }
         }

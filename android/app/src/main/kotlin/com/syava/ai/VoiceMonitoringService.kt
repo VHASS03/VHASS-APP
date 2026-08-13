@@ -3,6 +3,8 @@ package com.syava.ai
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.Handler
@@ -150,7 +152,11 @@ class VoiceMonitoringService : Service() {
         
         // Start as foreground service with persistent notification
         val notification = createNotification()
-        startForeground(NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
         System.out.println("[VoiceService] ✅ Foreground service started in ${currentMode} mode")
         
         // Delay initialization to ensure main looper is ready

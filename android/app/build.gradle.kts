@@ -25,10 +25,19 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties.getProperty("keyAlias")
-            keyPassword = keystoreProperties.getProperty("keyPassword")
-            storeFile = keystoreProperties.getProperty("storeFile")?.let { project.file(it) }
-            storePassword = keystoreProperties.getProperty("storePassword")
+            val alias = keystoreProperties.getProperty("keyAlias")?.trim()
+            val keyPass = keystoreProperties.getProperty("keyPassword")?.trim()
+            val storePass = keystoreProperties.getProperty("storePassword")?.trim()
+            val storeFileProp = keystoreProperties.getProperty("storeFile")?.trim()
+            val resolvedFile = storeFileProp?.let { project.file(it) }
+            
+            println("🔑 [SigningConfig] Release Alias: $alias")
+            println("🔑 [SigningConfig] Release StoreFile: ${resolvedFile?.absolutePath} (exists: ${resolvedFile?.exists()})")
+            
+            keyAlias = alias
+            keyPassword = keyPass
+            storePassword = storePass
+            storeFile = resolvedFile
         }
     }
 
@@ -57,8 +66,8 @@ android {
         manifestPlaceholders["com.google.android.geo.API_KEY"] = "AIzaSyABObu0QnKEykNF72Zqt_AdcG-wCgN4UQ4"
     }
 
-    aaptOptions {
-        noCompress("onnx")
+    androidResources {
+        noCompress += "onnx"
     }
 
     buildTypes {
@@ -68,18 +77,19 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
+                getDefaultProguardFile("proguard-android.txt"),
                 "proguard-rules.pro"
             )
             ndk {
-                debugSymbolLevel = "none"
+                debugSymbolLevel = "SYMBOL_TABLE"
             }
         }
     }
 
     packaging {
         jniLibs {
-            doNotStrip.add("**/*.so")
+            keepDebugSymbols.add("**/libonnxruntime.so")
+            keepDebugSymbols.add("**/libonnxruntime4j_jni.so")
         }
     }
 }
@@ -106,8 +116,4 @@ flutter {
     source = "../.."
 }
 
-tasks.configureEach {
-    if (name.contains("strip", ignoreCase = true)) {
-        enabled = false
-    }
-}
+
