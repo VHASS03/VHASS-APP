@@ -221,7 +221,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     showDialog(
       context: context,
       builder: (context) => _AddContactDialog(
-        onAdd: (name, phone, countryCode, priority) async {
+        onAdd: (name, phone, countryCode, priority, relationship) async {
           final response = await ContactsService.addContact(
             name: name,
             phone: phone,
@@ -527,8 +527,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
 }
 
 class _AddContactDialog extends StatefulWidget {
-  final Function(String name, String phone, String countryCode, int priority)
-  onAdd;
+  final Function(String name, String phone, String countryCode, int priority, String relationship) onAdd;
 
   const _AddContactDialog({required this.onAdd});
 
@@ -541,7 +540,17 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   late TextEditingController _phoneController;
   int _selectedPriority = 1;
   String _selectedCountry = 'IN';
+  String _selectedRelationship = 'Parent';
   bool _isLoading = false;
+
+  final List<String> _relationshipOptions = [
+    'Parent',
+    'Sibling',
+    'Guardian',
+    'Relative',
+    'Friend',
+    'Other',
+  ];
 
   @override
   void initState() {
@@ -549,7 +558,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
     _nameController = TextEditingController();
     _phoneController = TextEditingController();
     _phoneController.addListener(() {
-      setState(() {}); // Update max length based on country
+      setState(() {});
     });
   }
 
@@ -575,20 +584,49 @@ class _AddContactDialogState extends State<_AddContactDialog> {
     final countries = PhoneFormatter.getAvailableCountries();
 
     return AlertDialog(
-      title: const Text('Add Emergency Contact'),
+      title: Row(
+        children: [
+          Icon(Icons.contact_phone_outlined, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          const Text('Add Emergency Contact', style: TextStyle(fontSize: 18)),
+        ],
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Contact Name
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Contact Name',
-                hintText: 'e.g., Mom, Dad, Sister',
+                hintText: 'e.g. Parent Name, Sibling Name',
+                prefixIcon: Icon(Icons.person_outline),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
+
+            // Relationship Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedRelationship,
+              decoration: const InputDecoration(
+                labelText: 'Relationship',
+                prefixIcon: Icon(Icons.people_outline),
+              ),
+              items: _relationshipOptions.map((rel) {
+                return DropdownMenuItem(
+                  value: rel,
+                  child: Text(rel),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedRelationship = value);
+                }
+              },
+            ),
+            const SizedBox(height: 14),
 
             // Country Selection
             DropdownButtonFormField<String>(
@@ -612,7 +650,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
                 }
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Phone Number
             TextField(
@@ -620,12 +658,8 @@ class _AddContactDialogState extends State<_AddContactDialog> {
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Phone Number',
-                hintText:
-                    'e.g., ${_selectedCountry == 'US'
-                        ? '1234567890'
-                        : _selectedCountry == 'UK'
-                        ? '9876543210'
-                        : '9876543210'}',
+                hintText: '10-digit phone number',
+                prefixIcon: const Icon(Icons.phone_outlined),
                 helperText: 'Enter ${_getMaxPhoneLength()} digits',
                 errorText: _phoneController.text.isNotEmpty
                     ? _validatePhoneNumber(_phoneController.text)
@@ -634,53 +668,52 @@ class _AddContactDialogState extends State<_AddContactDialog> {
               maxLength: _getMaxPhoneLength(),
               onChanged: (value) => setState(() {}),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Priority
             DropdownButtonFormField<int>(
               value: _selectedPriority,
-              decoration: const InputDecoration(labelText: 'Priority'),
+              decoration: const InputDecoration(
+                labelText: 'Calling Priority',
+                prefixIcon: Icon(Icons.format_list_numbered),
+              ),
               items: const [
-                DropdownMenuItem(value: 1, child: Text('Priority 1 (First)')),
-                DropdownMenuItem(value: 2, child: Text('Priority 2 (Second)')),
-                DropdownMenuItem(value: 3, child: Text('Priority 3 (Third)')),
+                DropdownMenuItem(value: 1, child: Text('Priority 1 (First Call)')),
+                DropdownMenuItem(value: 2, child: Text('Priority 2 (Second Call)')),
+                DropdownMenuItem(value: 3, child: Text('Priority 3 (Third Call)')),
               ],
               onChanged: (value) {
                 if (value != null) {
-                  setState(() {
-                    _selectedPriority = value;
-                  });
+                  setState(() => _selectedPriority = value);
                 }
               },
             ),
 
-            // Show formatted number preview
             if (_phoneController.text.isNotEmpty &&
                 _validatePhoneNumber(_phoneController.text) == null)
               Padding(
-                padding: const EdgeInsets.only(top: 16),
+                padding: const EdgeInsets.only(top: 14),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: theme.colorScheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      const Text(
-                        'Phone Number:',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      Text(
-                        PhoneFormatter.formatPhoneNumber(
-                          _phoneController.text,
-                          _selectedCountry,
-                        ),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                      const Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          PhoneFormatter.formatPhoneNumber(
+                            _phoneController.text,
+                            _selectedCountry,
+                          ),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -696,12 +729,11 @@ class _AddContactDialogState extends State<_AddContactDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed:
-              _isLoading || _validatePhoneNumber(_phoneController.text) != null
+          onPressed: _isLoading || _validatePhoneNumber(_phoneController.text) != null
               ? null
               : () async {
-                  if (_nameController.text.isEmpty ||
-                      _phoneController.text.isEmpty ||
+                  if (_nameController.text.trim().isEmpty ||
+                      _phoneController.text.trim().isEmpty ||
                       _validatePhoneNumber(_phoneController.text) != null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -711,15 +743,14 @@ class _AddContactDialogState extends State<_AddContactDialog> {
                     return;
                   }
 
-                  setState(() {
-                    _isLoading = true;
-                  });
+                  setState(() => _isLoading = true);
 
                   widget.onAdd(
-                    _nameController.text,
-                    _phoneController.text,
+                    _nameController.text.trim(),
+                    _phoneController.text.trim(),
                     _selectedCountry,
                     _selectedPriority,
+                    _selectedRelationship,
                   );
 
                   Navigator.pop(context);
@@ -738,7 +769,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
                     ),
                   ),
                 )
-              : const Text('Add'),
+              : const Text('Add Contact'),
         ),
       ],
     );

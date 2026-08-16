@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/wellness_settings.dart';
+import '../models/period_log.dart';
+import '../constants/wellness_constants.dart';
 import '../services/wellness_tracker_service.dart';
 
 /// Settings screen for configuring cycle length, period length, reminders, and data export/deletion.
@@ -57,6 +59,7 @@ class _TrackerSettingsScreenState extends State<TrackerSettingsScreen> {
         children: [
           // ─── CYCLE BASICS ──
           _buildSectionHeader('CYCLE BASICS'),
+          _buildLastPeriodDatePicker(context),
           _buildCycleLengthPicker(context),
           _buildPeriodLengthPicker(context),
           const SizedBox(height: 24),
@@ -146,6 +149,38 @@ class _TrackerSettingsScreenState extends State<TrackerSettingsScreen> {
           letterSpacing: 1.2,
         ),
       ),
+    );
+  }
+
+  Widget _buildLastPeriodDatePicker(BuildContext context) {
+    final dateStr = _settings.lastPeriodDate != null
+        ? '${_settings.lastPeriodDate!.day}/${_settings.lastPeriodDate!.month}/${_settings.lastPeriodDate!.year}'
+        : 'Not Set';
+    return ListTile(
+      title: const Text('Last Period Start Date'),
+      subtitle: Text(dateStr),
+      trailing: const Icon(Icons.calendar_month, color: Colors.pinkAccent),
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _settings.lastPeriodDate ?? DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+        );
+        if (picked != null) {
+          final updated = _settings.copyWith(lastPeriodDate: picked);
+          await _saveSettings(updated);
+
+          // Save period log for chosen start date to feed DB
+          await WellnessTrackerService.upsertPeriodLog(
+            PeriodLog(
+              date: picked,
+              flow: FlowIntensity.medium,
+              notes: 'Start date updated via settings',
+            ),
+          );
+        }
+      },
     );
   }
 

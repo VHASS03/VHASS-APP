@@ -22,7 +22,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   WellnessSettings _settings = WellnessSettings();
   List<PeriodLog> _periodLogs = [];
   List<CycleData> _cycleHistory = [];
-  DateTime _lastPeriodStart = DateTime.now().subtract(const Duration(days: 10));
+  DateTime _lastPeriodStart = DateTime.now();
 
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
@@ -46,7 +46,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final periodLogs = await WellnessTrackerService.getPeriodLogs();
     final cycleHistory = await WellnessTrackerService.getCycleHistory();
 
-    DateTime lastStart = DateTime.now().subtract(const Duration(days: 10));
+    DateTime lastStart = settings.lastPeriodDate ?? DateTime.now();
     if (periodLogs.isNotEmpty) {
       final sorted = List<PeriodLog>.from(periodLogs)
         ..sort((a, b) => b.date.compareTo(a.date));
@@ -59,6 +59,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           break;
         }
       }
+    } else if (settings.lastPeriodDate != null) {
+      lastStart = settings.lastPeriodDate!;
     } else if (cycleHistory.isNotEmpty) {
       lastStart = cycleHistory.first.startDate;
     }

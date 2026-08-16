@@ -3,13 +3,22 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IUser extends Document {
   phone: string;
   name?: string;
+  admissionNumber?: string;
   email?: string;
+  course?: string;
+  year?: string;
   age?: number;
+  gender?: string;
+  residenceType?: string;
+  roomNumber?: string;
+  guardianName?: string;
+  guardianPhone?: string;
+  emergencyRelationship?: string;
   occupation?: string;
   isPhoneVerified: boolean;
   devices: mongoose.Types.ObjectId[];
   emergencyContacts: mongoose.Types.ObjectId[];
-    sosPIN?: string;
+  sosPIN?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,9 +31,12 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       trim: true,
       match: [/^[0-9]{10}$/, 'Phone must be exactly 10 digits'],
-      // Note: unique: true already creates an index, so we don't need index: true here
     },
     name: {
+      type: String,
+      trim: true,
+    },
+    admissionNumber: {
       type: String,
       trim: true,
     },
@@ -34,9 +46,42 @@ const UserSchema = new Schema<IUser>(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
     },
+    course: {
+      type: String,
+      trim: true,
+    },
+    year: {
+      type: String,
+      trim: true,
+    },
     age: {
       type: Number,
       min: [13, 'Age must be at least 13'],
+    },
+    gender: {
+      type: String,
+      trim: true,
+    },
+    residenceType: {
+      type: String,
+      enum: ['Hosteller', 'Day Scholar'],
+      default: 'Day Scholar',
+    },
+    roomNumber: {
+      type: String,
+      trim: true,
+    },
+    guardianName: {
+      type: String,
+      trim: true,
+    },
+    guardianPhone: {
+      type: String,
+      trim: true,
+    },
+    emergencyRelationship: {
+      type: String,
+      trim: true,
     },
     occupation: {
       type: String,
@@ -68,9 +113,8 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Indexes for performance
-// Note: phone index is already created by unique: true, so we only add isPhoneVerified index
 UserSchema.index({ isPhoneVerified: 1 });
 
 export default mongoose.model<IUser>('User', UserSchema);
+
 

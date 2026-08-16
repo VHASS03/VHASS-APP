@@ -12,6 +12,21 @@ class WellnessEventsScreen extends StatefulWidget {
 
 class _WellnessEventsScreenState extends State<WellnessEventsScreen> {
   final _wellnessService = UniversityWellnessService();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    setState(() => _isLoading = true);
+    await _wellnessService.fetchEvents();
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,10 +40,48 @@ class _WellnessEventsScreenState extends State<WellnessEventsScreen> {
         elevation: 0,
       ),
       body: SafeArea(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(18),
-          itemCount: events.length,
-          itemBuilder: (context, index) {
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : events.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_busy_outlined,
+                            size: 64,
+                            color: AppColors.primary.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "No Events or Workshops Scheduled",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "There are currently no upcoming wellness events scheduled in the database. Please check back later!",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? AppColors.textSecondary : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadEvents,
+                    color: AppColors.primary,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(18),
+                      itemCount: events.length,
+                      itemBuilder: (context, index) {
             final event = events[index];
 
             return Card(
@@ -137,8 +190,9 @@ class _WellnessEventsScreenState extends State<WellnessEventsScreen> {
           },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showSuccessNotification(String title) {
     showDialog(

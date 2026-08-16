@@ -298,8 +298,218 @@ router.post('/sync', async (req: Request, res: Response): Promise<void> => {
       data: wellness,
       message: 'Data synced successfully',
     });
+import Counsellor from '../models/Counsellor';
+import Appointment from '../models/Appointment';
+import WellnessEvent from '../models/WellnessEvent';
+
+/**
+ * GET /api/wellness/counsellors
+ * Fetch list of counsellors from database
+ */
+router.get('/counsellors', async (req: Request, res: Response): Promise<void> => {
+  try {
+    let list = await Counsellor.find().lean();
+    if (list.length === 0) {
+      // Seed default counsellors if database has none
+      list = await Counsellor.insertMany([
+        {
+          name: 'Dr. Elena Gilbert',
+          specialization: 'Anxiety & Depression Specialist',
+          imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150',
+          rating: 4.9,
+          availability: ['09:00 AM', '10:00 AM', '11:30 AM', '02:00 PM', '04:00 PM'],
+          email: 'elena.g@university.edu',
+        },
+        {
+          name: 'Dr. Alaric Saltzman',
+          specialization: 'Stress Management & Academics Specialist',
+          imageUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150',
+          rating: 4.8,
+          availability: ['10:30 AM', '11:00 AM', '01:00 PM', '03:00 PM', '05:00 PM'],
+          email: 'alaric.s@university.edu',
+        },
+        {
+          name: 'Dr. Stefan Salvatore',
+          specialization: 'Crisis Intervention & Relationships Counsel',
+          imageUrl: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=150',
+          rating: 4.7,
+          availability: ['09:30 AM', '12:00 PM', '02:30 PM', '03:30 PM', '04:30 PM'],
+          email: 'stefan.s@university.edu',
+        },
+      ]) as any;
+    }
+
+    res.json({
+      success: true,
+      data: list,
+    });
   } catch (error) {
-    console.error('Error syncing wellness data:', error);
+    console.error('Error fetching counsellors:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
+ * GET /api/wellness/appointments
+ * Fetch logged in user's appointments
+ */
+router.get('/appointments', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const appointments = await Appointment.find({ studentId: userId })
+      .populate('counsellorId')
+      .sort({ date: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      data: appointments,
+    });
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
+ * POST /api/wellness/appointments
+ * Book a new counselling appointment
+ */
+router.post('/appointments', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const { counsellorId, studentName, studentPhone, concern, date, timeSlot, isHighPriority } = req.body;
+
+    if (!counsellorId || !studentName || !studentPhone || !concern || !date || !timeSlot) {
+      res.status(400).json({ success: false, message: 'Missing required appointment details' });
+      return;
+    }
+
+    const newAppointment = await Appointment.create({
+      studentId: userId,
+      counsellorId,
+      studentName,
+      studentPhone,
+      concern,
+      date: new Date(date),
+      timeSlot,
+      isHighPriority: !!isHighPriority,
+      status: 'Pending',
+    });
+
+    const populated = await Appointment.findById(newAppointment._id).populate('counsellorId').lean();
+
+    res.json({
+      success: true,
+      data: populated,
+      message: 'Appointment booked successfully',
+    });
+  } catch (error) {
+    console.error('Error booking appointment:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
+ * PUT /api/wellness/appointments/:id
+ * Reschedule or update appointment status
+ */
+router.put('/appointments/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const { id } = req.params;
+    const { status, date, timeSlot } = req.body;
+
+    const update: Record<string, any> = {};
+    if (status !== undefined) update.status = status;
+    if (date !== undefined) update.date = new Date(date);
+    if (timeSlot !== undefined) update.timeSlot = timeSlot;
+
+    const updated = await Appointment.findOneAndUpdate(
+      { _id: id, studentId: userId },
+      { $set: update },
+      { new: true }
+    ).populate('counsellorId').lean();
+
+    if (!updated) {
+      res.status(404).json({ success: false, message: 'Appointment not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Appointment updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating appointment:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
+ * GET /api/wellness/events
+ * Fetch wellness events from database (returns [] if none in DB)
+ */
+router.get('/events', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const events = await WellnessEvent.find().sort({ date: 1 }).lean();
+    res.json({
+      success: true,
+      data: events,
+    });
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
+ * POST /api/wellness/events/:id/register
+ * Register logged in user for an event
+ */
+router.post('/events/:id/register', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const { id } = req.params;
+    const event = await WellnessEvent.findById(id);
+    if (!event) {
+      res.status(404).json({ success: false, message: 'Event not found' });
+      return;
+    }
+
+    if (!event.registeredUsers.includes(userId as any)) {
+      event.registeredUsers.push(userId as any);
+      await event.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Successfully registered for event',
+      data: event,
+    });
+  } catch (error) {
+    console.error('Error registering for event:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

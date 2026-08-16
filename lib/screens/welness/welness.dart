@@ -10,6 +10,10 @@ import '../../core/services/api_service.dart';
 import '../../core/config/api_config.dart';
 import '../../core/colors.dart';
 import '../chat_screen.dart';
+import '../../features/women_wellness_tracker/services/wellness_tracker_service.dart';
+import '../../features/women_wellness_tracker/models/wellness_settings.dart';
+import '../../features/women_wellness_tracker/models/period_log.dart';
+import '../../features/women_wellness_tracker/constants/wellness_constants.dart';
 
 class WellnessScreen extends StatefulWidget {
   const WellnessScreen({super.key});
@@ -21,7 +25,7 @@ class WellnessScreen extends StatefulWidget {
 class _WellnessScreenState extends State<WellnessScreen> {
   // ─── STATE ───────────────────────────────
   String _healthCondition = "None";
-  DateTime _lastPeriodDate = DateTime.now().subtract(const Duration(days: 2));
+  DateTime _lastPeriodDate = DateTime.now();
   int _cycleLength = 28;
   int _periodLength = 5;
   bool _setupDone = false;
@@ -56,18 +60,27 @@ class _WellnessScreenState extends State<WellnessScreen> {
   }
 
   Future<void> _loadSetup() async {
-    final prefs = await SharedPreferences.getInstance();
-    final done = prefs.getBool('wellness_setup_done') ?? false;
+    // Sync backend settings & logs first
+    await WellnessTrackerService.fetchFromBackend();
 
-    if (done) {
+    final settings = await WellnessTrackerService.getSettings();
+    final isDone = await WellnessTrackerService.isOnboarded();
+    final prefs = await SharedPreferences.getInstance();
+    final done = isDone || (prefs.getBool('wellness_setup_done') ?? false);
+
+    if (settings.lastPeriodDate != null || done) {
       setState(() {
         _setupDone = true;
-        _healthCondition = prefs.getString('wellness_condition') ?? 'None';
-        _periodLength = prefs.getInt('wellness_period_length') ?? 5;
-        _cycleLength = prefs.getInt('wellness_cycle_length') ?? 28;
-        final dateStr = prefs.getString('wellness_last_period');
-        if (dateStr != null) {
-          _lastPeriodDate = DateTime.tryParse(dateStr) ?? _lastPeriodDate;
+        _healthCondition = settings.healthCondition ?? 'None';
+        _periodLength = settings.periodLength;
+        _cycleLength = settings.cycleLength;
+        if (settings.lastPeriodDate != null) {
+          _lastPeriodDate = settings.lastPeriodDate!;
+        } else {
+          final dateStr = prefs.getString('wellness_last_period');
+          if (dateStr != null) {
+            _lastPeriodDate = DateTime.tryParse(dateStr) ?? _lastPeriodDate;
+          }
         }
       });
     } else {
@@ -76,6 +89,24 @@ class _WellnessScreenState extends State<WellnessScreen> {
   }
 
   Future<void> _saveSetup() async {
+    final updatedSettings = WellnessSettings(
+      cycleLength: _cycleLength,
+      periodLength: _periodLength,
+      lastPeriodDate: _lastPeriodDate,
+      healthCondition: _healthCondition,
+    );
+    await WellnessTrackerService.saveSettings(updatedSettings);
+    await WellnessTrackerService.setOnboarded(true);
+
+    // Save initial period log starting on _lastPeriodDate into DB
+    await WellnessTrackerService.upsertPeriodLog(
+      PeriodLog(
+        date: _lastPeriodDate,
+        flow: FlowIntensity.medium,
+        notes: 'Initial period start date logged',
+      ),
+    );
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('wellness_setup_done', true);
     await prefs.setString('wellness_condition', _healthCondition);
@@ -93,18 +124,6 @@ class _WellnessScreenState extends State<WellnessScreen> {
         _periodLength,
         _notes,
       );
-    }
-
-    try {
-      await ApiService.put('/wellness/settings', {
-        'cycleLength': _cycleLength,
-        'periodLength': _periodLength,
-        'lastPeriodDate': _lastPeriodDate.toIso8601String(),
-        'healthCondition': _healthCondition,
-        'setupDone': true,
-      });
-    } catch (e) {
-      print('⚠️ Error syncing wellness setup to backend: $e');
     }
   }
 
@@ -305,47 +324,168 @@ class _WellnessScreenState extends State<WellnessScreen> {
           String title;
           String subtitle;
 
+          bool isCurrentlyOnPeriod = false;
+          int currentDayOfPeriod = 1;
+
           switch (step) {
             case 0:
-              title = '🌸 When was your last period?';
-              subtitle = 'Tap to pick the start date';
-              stepContent = GestureDetector(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: ctx,
-                    initialDate: selectedDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) setD(() => selectedDate = picked);
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.card
-                        : AppColors.blush.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Row(
+              title = '🌸 Log Your Period';
+              subtitle = 'Are you currently on your period or logging a previous one?';
+              stepContent = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Mode Selector
+                  Row(
                     children: [
-                      Icon(Icons.calendar_today, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Text(
-                        DateFormat('MMM dd, yyyy').format(selectedDate),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: theme.textTheme.bodyLarge?.color,
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setD(() {
+                            isCurrentlyOnPeriod = true;
+                            selectedDate = DateTime.now().subtract(Duration(days: currentDayOfPeriod - 1));
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isCurrentlyOnPeriod
+                                  ? AppColors.primary.withOpacity(0.15)
+                                  : (isDark ? AppColors.card : AppColors.blush.withOpacity(0.08)),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isCurrentlyOnPeriod ? AppColors.primary : Colors.grey.withOpacity(0.2),
+                                width: isCurrentlyOnPeriod ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                const Text('🩸', style: TextStyle(fontSize: 22)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Currently On Period',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isCurrentlyOnPeriod ? FontWeight.bold : FontWeight.normal,
+                                    color: theme.textTheme.bodyLarge?.color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setD(() {
+                            isCurrentlyOnPeriod = false;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: !isCurrentlyOnPeriod
+                                  ? AppColors.primary.withOpacity(0.15)
+                                  : (isDark ? AppColors.card : AppColors.blush.withOpacity(0.08)),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: !isCurrentlyOnPeriod ? AppColors.primary : Colors.grey.withOpacity(0.2),
+                                width: !isCurrentlyOnPeriod ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                const Text('📅', style: TextStyle(fontSize: 22)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Log Last Period',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: !isCurrentlyOnPeriod ? FontWeight.bold : FontWeight.normal,
+                                    color: theme.textTheme.bodyLarge?.color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 16),
+
+                  if (isCurrentlyOnPeriod) ...[
+                    Text(
+                      'Which day of your period is today?',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: List.generate(7, (i) {
+                        final dayNum = i + 1;
+                        final isSel = currentDayOfPeriod == dayNum;
+                        return ChoiceChip(
+                          label: Text('Day $dayNum'),
+                          selected: isSel,
+                          selectedColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            color: isSel ? Colors.white : theme.textTheme.bodyLarge?.color,
+                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                          ),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setD(() {
+                                currentDayOfPeriod = dayNum;
+                                selectedDate = DateTime.now().subtract(Duration(days: dayNum - 1));
+                              });
+                            }
+                          },
+                        );
+                      }),
+                    ),
+                  ] else ...[
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) setD(() => selectedDate = picked);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.card : AppColors.blush.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today, color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Text(
+                              DateFormat('MMM dd, yyyy').format(selectedDate),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodyLarge?.color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               );
               break;
 
