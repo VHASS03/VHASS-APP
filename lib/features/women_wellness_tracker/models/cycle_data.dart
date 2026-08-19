@@ -1,14 +1,14 @@
 /// Represents a completed menstrual cycle.
 class CycleData {
   final DateTime startDate;
-  final DateTime endDate; // Last day of period bleeding
+  final DateTime? endDate; // Last day of period bleeding, optional if ongoing
   final int cycleLength; // Total days from this start to next start
   final int periodLength; // Days of bleeding
   final bool predicted; // Whether this was auto-predicted
 
   CycleData({
     required this.startDate,
-    required this.endDate,
+    this.endDate,
     required this.cycleLength,
     required this.periodLength,
     this.predicted = false,
@@ -18,7 +18,7 @@ class CycleData {
   factory CycleData.fromJson(Map<String, dynamic> json) {
     return CycleData(
       startDate: DateTime.parse(json['startDate'] as String),
-      endDate: DateTime.parse(json['endDate'] as String),
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate'] as String) : null,
       cycleLength: json['cycleLength'] as int? ?? 28,
       periodLength: json['periodLength'] as int? ?? 5,
       predicted: json['predicted'] as bool? ?? false,
@@ -29,7 +29,7 @@ class CycleData {
   Map<String, dynamic> toJson() {
     return {
       'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
       'cycleLength': cycleLength,
       'periodLength': periodLength,
       'predicted': predicted,

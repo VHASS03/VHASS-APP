@@ -58,7 +58,7 @@ class WellnessService {
   }
 
   /// Save health notes for user
-  /// Each note is a map with 'date' (ISO string) and 'note' (text)
+  /// Each note is a map with 'date', 'note' (or 'text'), and 'mood'
   static Future<void> saveHealthNotes(
     String userId,
     List<Map<String, dynamic>> notes,
@@ -67,7 +67,8 @@ class WellnessService {
     final notesJson = notes.map((note) {
       return {
         'date': (note['date'] as DateTime).toIso8601String(),
-        'note': note['note'] as String,
+        'note': (note['note'] ?? note['text'] ?? '') as String,
+        'mood': (note['mood'] ?? '😊') as String,
       };
     }).toList();
 
@@ -88,7 +89,8 @@ class WellnessService {
         final notes = notesJson.map((note) {
           return {
             'date': DateTime.parse(note['date'] as String),
-            'note': note['note'] as String,
+            'note': note['note'] as String? ?? '',
+            'mood': note['mood'] as String? ?? '😊',
           };
         }).toList();
 

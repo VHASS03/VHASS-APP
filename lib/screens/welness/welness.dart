@@ -58,20 +58,91 @@ class _WellnessScreenState extends State<WellnessScreen> {
   Future<void> _loadSetup() async {
     final prefs = await SharedPreferences.getInstance();
     final done = prefs.getBool('wellness_setup_done') ?? false;
+    final userId = await StorageService.getUserId();
 
+    // 1. Offline-first: Load from local SharedPreferences cache immediately
     if (done) {
+      final lastPeriodStr = prefs.getString('wellness_last_period');
+      final localNotes = userId != null ? await WellnessService.getHealthNotes(userId) : <Map<String, dynamic>>[];
+      
       setState(() {
         _setupDone = true;
         _healthCondition = prefs.getString('wellness_condition') ?? 'None';
         _periodLength = prefs.getInt('wellness_period_length') ?? 5;
         _cycleLength = prefs.getInt('wellness_cycle_length') ?? 28;
-        final dateStr = prefs.getString('wellness_last_period');
-        if (dateStr != null) {
-          _lastPeriodDate = DateTime.tryParse(dateStr) ?? _lastPeriodDate;
+        if (lastPeriodStr != null) {
+          _lastPeriodDate = DateTime.tryParse(lastPeriodStr) ?? _lastPeriodDate;
         }
+        _notes.clear();
+        _notes.addAll(localNotes.map((n) => {
+          'text': n['note'] ?? n['text'] ?? '',
+          'mood': n['mood'] ?? '😊',
+          'date': n['date'] as DateTime,
+        }).toList());
       });
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showSetupDialog());
+    }
+
+    // 2. Fetch latest live data from the backend database dynamically
+    try {
+      final response = await ApiService.get('/wellness');
+      if (response.success && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        
+        final cycleLength = data['cycleLength'] as int? ?? 28;
+        final periodLength = data['periodLength'] as int? ?? 5;
+        final healthCondition = data['healthCondition'] as String? ?? 'None';
+        final lastPeriodDateStr = data['lastPeriodDate'] as String?;
+        final setupDone = data['setupDone'] as bool? ?? false;
+        
+        final List<dynamic> dailyLogsJson = data['dailyLogs'] as List<dynamic>? ?? [];
+        final List<Map<String, dynamic>> backendNotes = dailyLogsJson.map((log) {
+          return {
+            'text': log['notes'] as String? ?? '',
+            'mood': log['mood'] as String? ?? '😊',
+            'date': DateTime.tryParse(log['date'] as String? ?? '') ?? DateTime.now(),
+          };
+        }).where((note) => (note['text'] as String).isNotEmpty).toList();
+        
+        // Sort notes chronologically (newest first)
+        backendNotes.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
+        
+        setState(() {
+          _cycleLength = cycleLength;
+          _periodLength = periodLength;
+          _healthCondition = healthCondition;
+          _setupDone = setupDone;
+          if (lastPeriodDateStr != null) {
+            _lastPeriodDate = DateTime.tryParse(lastPeriodDateStr) ?? _lastPeriodDate;
+          }
+          _notes.clear();
+          _notes.addAll(backendNotes);
+        });
+
+        // 3. Keep local cache synchronized with backend data
+        await prefs.setBool('wellness_setup_done', setupDone);
+        await prefs.setString('wellness_condition', healthCondition);
+        await prefs.setInt('wellness_period_length', periodLength);
+        await prefs.setInt('wellness_cycle_length', cycleLength);
+        if (lastPeriodDateStr != null) {
+          await prefs.setString('wellness_last_period', lastPeriodDateStr);
+        }
+        if (userId != null && userId.isNotEmpty) {
+          final localNotesToSave = backendNotes.map((n) => {
+            'date': n['date'] as DateTime,
+            'note': n['text'] as String,
+            'mood': n['mood'] as String,
+          }).toList();
+          await WellnessService.saveHealthNotes(userId, localNotesToSave);
+        }
+      } else if (!done) {
+        // Show setup dialog if not configured yet
+        WidgetsBinding.instance.addPostFrameCallback((_) => _showSetupDialog());
+      }
+    } catch (e) {
+      print('⚠️ Error loading/syncing wellness data from backend: $e');
+      if (!done) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _showSetupDialog());
+      }
     }
   }
 
@@ -617,15 +688,41 @@ class _WellnessScreenState extends State<WellnessScreen> {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (controller.text.isNotEmpty) {
+                    final noteText = controller.text;
+                    final mood = selectedMood;
+                    final date = DateTime.now();
+
                     setState(() {
                       _notes.insert(0, {
-                        'text': controller.text,
-                        'mood': selectedMood,
-                        'date': DateTime.now(),
+                        'text': noteText,
+                        'mood': mood,
+                        'date': date,
                       });
                     });
+
+                    // Save locally to cache in the background
+                    final userId = await StorageService.getUserId();
+                    if (userId != null && userId.isNotEmpty) {
+                      final localNotesToSave = _notes.map((n) => {
+                        'date': n['date'] as DateTime,
+                        'note': n['text'] as String,
+                        'mood': n['mood'] as String,
+                      }).toList();
+                      await WellnessService.saveHealthNotes(userId, localNotesToSave);
+                    }
+
+                    // Save to backend remote database
+                    try {
+                      await ApiService.post('/wellness/daily-log', {
+                        'date': date.toIso8601String(),
+                        'mood': mood,
+                        'notes': noteText,
+                      });
+                    } catch (e) {
+                      print('⚠️ Error saving daily log note to database: $e');
+                    }
                   }
                   Navigator.pop(ctx);
                 },
@@ -1161,6 +1258,33 @@ class _WellnessScreenState extends State<WellnessScreen> {
     );
   }
 
+  Future<void> _deleteNote(int index) async {
+    final deletedNote = _notes[index];
+    final date = deletedNote['date'] as DateTime;
+
+    setState(() {
+      _notes.removeAt(index);
+    });
+
+    // 1. Delete locally from cache
+    final userId = await StorageService.getUserId();
+    if (userId != null && userId.isNotEmpty) {
+      final localNotesToSave = _notes.map((n) => {
+        'date': n['date'] as DateTime,
+        'note': n['text'] as String,
+        'mood': n['mood'] as String,
+      }).toList();
+      await WellnessService.saveHealthNotes(userId, localNotesToSave);
+    }
+
+    // 2. Delete from remote database
+    try {
+      await ApiService.delete('/wellness/daily-log/${date.toIso8601String()}');
+    } catch (e) {
+      print('⚠️ Error deleting daily log from backend: $e');
+    }
+  }
+
   // ─── NOTES LIST ─────────────────────────
 
   Widget _notesList() {
@@ -1227,7 +1351,7 @@ class _WellnessScreenState extends State<WellnessScreen> {
             ),
             child: const Icon(Icons.delete, color: Colors.red),
           ),
-          onDismissed: (_) => setState(() => _notes.removeAt(i)),
+          onDismissed: (_) => _deleteNote(i),
           child: Container(
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(14),

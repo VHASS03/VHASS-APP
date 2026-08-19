@@ -2,6 +2,8 @@
 class WellnessSettings {
   final int cycleLength; // Default 28
   final int periodLength; // Default 5
+  final DateTime? lastPeriodDate;
+  final String healthCondition; // Default 'None'
   final bool periodReminder;
   final bool ovulationReminder;
   final bool dailyLogReminder;
@@ -11,6 +13,8 @@ class WellnessSettings {
   WellnessSettings({
     this.cycleLength = 28,
     this.periodLength = 5,
+    this.lastPeriodDate,
+    this.healthCondition = 'None',
     this.periodReminder = true,
     this.ovulationReminder = true,
     this.dailyLogReminder = false,
@@ -23,6 +27,8 @@ class WellnessSettings {
     return WellnessSettings(
       cycleLength: json['cycleLength'] as int? ?? 28,
       periodLength: json['periodLength'] as int? ?? 5,
+      lastPeriodDate: json['lastPeriodDate'] != null ? DateTime.tryParse(json['lastPeriodDate'] as String) : null,
+      healthCondition: json['healthCondition'] as String? ?? 'None',
       periodReminder: json['periodReminder'] as bool? ?? true,
       ovulationReminder: json['ovulationReminder'] as bool? ?? true,
       dailyLogReminder: json['dailyLogReminder'] as bool? ?? false,
@@ -36,6 +42,8 @@ class WellnessSettings {
     return {
       'cycleLength': cycleLength,
       'periodLength': periodLength,
+      'lastPeriodDate': lastPeriodDate?.toIso8601String(),
+      'healthCondition': healthCondition,
       'periodReminder': periodReminder,
       'ovulationReminder': ovulationReminder,
       'dailyLogReminder': dailyLogReminder,
@@ -48,6 +56,8 @@ class WellnessSettings {
   WellnessSettings copyWith({
     int? cycleLength,
     int? periodLength,
+    DateTime? lastPeriodDate,
+    String? healthCondition,
     bool? periodReminder,
     bool? ovulationReminder,
     bool? dailyLogReminder,
@@ -57,6 +67,8 @@ class WellnessSettings {
     return WellnessSettings(
       cycleLength: cycleLength ?? this.cycleLength,
       periodLength: periodLength ?? this.periodLength,
+      lastPeriodDate: lastPeriodDate ?? this.lastPeriodDate,
+      healthCondition: healthCondition ?? this.healthCondition,
       periodReminder: periodReminder ?? this.periodReminder,
       ovulationReminder: ovulationReminder ?? this.ovulationReminder,
       dailyLogReminder: dailyLogReminder ?? this.dailyLogReminder,

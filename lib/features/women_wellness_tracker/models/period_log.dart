@@ -3,6 +3,7 @@ import '../constants/wellness_constants.dart';
 /// Represents a single period log entry for a specific date.
 class PeriodLog {
   final DateTime date;
+  final DateTime? endDate;
   final FlowIntensity? flow;
   final List<SymptomType> symptoms;
   final MoodType? mood;
@@ -13,6 +14,7 @@ class PeriodLog {
 
   PeriodLog({
     required this.date,
+    this.endDate,
     this.flow,
     this.symptoms = const [],
     this.mood,
@@ -26,6 +28,9 @@ class PeriodLog {
   factory PeriodLog.fromJson(Map<String, dynamic> json) {
     return PeriodLog(
       date: DateTime.parse(json['date'] as String),
+      endDate: json['endDate'] != null
+          ? DateTime.parse(json['endDate'] as String)
+          : null,
       flow: json['flow'] != null
           ? FlowIntensity.values[json['flow'] as int]
           : null,
@@ -47,6 +52,7 @@ class PeriodLog {
   Map<String, dynamic> toJson() {
     return {
       'date': date.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
       'flow': flow?.index,
       'symptoms': symptoms.map((s) => s.index).toList(),
       'mood': mood?.index,
@@ -60,6 +66,7 @@ class PeriodLog {
   /// Create a copy with modified fields
   PeriodLog copyWith({
     DateTime? date,
+    DateTime? endDate,
     FlowIntensity? flow,
     List<SymptomType>? symptoms,
     MoodType? mood,
@@ -70,6 +77,7 @@ class PeriodLog {
   }) {
     return PeriodLog(
       date: date ?? this.date,
+      endDate: endDate ?? this.endDate,
       flow: flow ?? this.flow,
       symptoms: symptoms ?? this.symptoms,
       mood: mood ?? this.mood,

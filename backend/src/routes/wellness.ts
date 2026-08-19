@@ -167,6 +167,39 @@ router.delete('/period-log/:date', async (req: Request, res: Response): Promise<
 });
 
 /**
+ * DELETE /api/wellness/daily-log/:date
+ * Delete a daily log for a given date
+ */
+router.delete('/daily-log/:date', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const { date } = req.params;
+    const targetDateStr = new Date(date).toISOString().split('T')[0];
+
+    const wellness = await Wellness.findOne({ userId });
+    if (wellness) {
+      wellness.dailyLogs = wellness.dailyLogs.filter(
+        (log) => new Date(log.date).toISOString().split('T')[0] !== targetDateStr
+      );
+      await wellness.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Daily log deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting daily log:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
  * POST /api/wellness/daily-log
  * Add or update a daily log
  */

@@ -42,7 +42,7 @@ class WellnessTrackerService {
         final settings = WellnessSettings(
           cycleLength: data['cycleLength'] ?? 28,
           periodLength: data['periodLength'] ?? 5,
-          lastPeriodDate: data['lastPeriodDate'] != null ? DateTime.tryParse(data['lastPeriodDate']) : null,
+          lastPeriodDate: data['lastPeriodDate'] != null ? DateTime.tryParse(data['lastPeriodDate'] as String) : null,
           healthCondition: data['healthCondition'] ?? 'None',
         );
         await prefs.setString('${WellnessKeys.settings}$uid', jsonEncode(settings.toJson()));
@@ -54,11 +54,11 @@ class WellnessTrackerService {
         if (data['periodLogs'] != null) {
           final List<dynamic> pLogs = data['periodLogs'];
           final parsedPeriodLogs = pLogs.map((e) => PeriodLog(
-            date: DateTime.parse(e['date']),
-            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate']) : null,
-            flow: e['flow'] ?? 'medium',
-            symptoms: List<String>.from(e['symptoms'] ?? []),
-            notes: e['notes'] ?? '',
+            date: DateTime.parse(e['date'] as String),
+            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate'] as String) : null,
+            flow: _parseFlow(e['flow']),
+            symptoms: _parseSymptoms(e['symptoms']),
+            notes: e['notes'] as String? ?? '',
           )).toList();
           await prefs.setString('${WellnessKeys.periodLogs}$uid', jsonEncode(parsedPeriodLogs.map((l) => l.toJson()).toList()));
         }
@@ -67,12 +67,12 @@ class WellnessTrackerService {
         if (data['dailyLogs'] != null) {
           final List<dynamic> dLogs = data['dailyLogs'];
           final parsedDailyLogs = dLogs.map((e) => DailyLog(
-            date: DateTime.parse(e['date']),
-            mood: e['mood'],
+            date: DateTime.parse(e['date'] as String),
+            mood: _parseMood(e['mood']),
             energyLevel: e['energyLevel'] != null ? (e['energyLevel'] as num).toInt() : null,
-            symptoms: List<String>.from(e['symptoms'] ?? []),
-            notes: e['notes'] ?? '',
-            waterIntake: e['waterIntake'] != null ? (e['waterIntake'] as num).toInt() : 0,
+            symptoms: _parseSymptoms(e['symptoms']),
+            notes: e['notes'] as String? ?? '',
+            waterIntakeMl: e['waterIntake'] != null ? (e['waterIntake'] as num).toInt() : 0,
           )).toList();
           await prefs.setString('${WellnessKeys.dailyLogs}$uid', jsonEncode(parsedDailyLogs.map((l) => l.toJson()).toList()));
         }
@@ -81,10 +81,10 @@ class WellnessTrackerService {
         if (data['cycleHistory'] != null) {
           final List<dynamic> cHistory = data['cycleHistory'];
           final parsedCycles = cHistory.map((e) => CycleData(
-            startDate: DateTime.parse(e['startDate']),
-            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate']) : null,
-            cycleLength: e['cycleLength'] ?? 28,
-            periodLength: e['periodLength'] ?? 5,
+            startDate: DateTime.parse(e['startDate'] as String),
+            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate'] as String) : null,
+            cycleLength: e['cycleLength'] as int? ?? 28,
+            periodLength: e['periodLength'] as int? ?? 5,
           )).toList();
           await prefs.setString('${WellnessKeys.cycleHistory}$uid', jsonEncode(parsedCycles.map((c) => c.toJson()).toList()));
         }
@@ -137,8 +137,8 @@ class WellnessTrackerService {
       await ApiService.post('/wellness/period-log', {
         'date': log.date.toIso8601String(),
         'endDate': log.endDate?.toIso8601String(),
-        'flow': log.flow,
-        'symptoms': log.symptoms,
+        'flow': log.flow?.name,
+        'symptoms': log.symptoms.map((s) => s.name).toList(),
         'notes': log.notes,
       });
     } catch (e) {
@@ -212,11 +212,11 @@ class WellnessTrackerService {
     try {
       await ApiService.post('/wellness/daily-log', {
         'date': log.date.toIso8601String(),
-        'mood': log.mood,
+        'mood': log.mood?.name,
         'energyLevel': log.energyLevel,
-        'symptoms': log.symptoms,
+        'symptoms': log.symptoms.map((s) => s.name).toList(),
         'notes': log.notes,
-        'waterIntake': log.waterIntake,
+        'waterIntake': log.waterIntakeMl,
       });
     } catch (e) {
       print('⚠️ [WWT] Async backend daily log sync error: $e');
@@ -356,5 +356,36 @@ class WellnessTrackerService {
   /// Normalize a DateTime to date-only string key (yyyy-MM-dd).
   static String _dateKey(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  }
+
+  // ─── ENUM STRING HELPERS ───────────────────
+
+  static FlowIntensity? _parseFlow(dynamic flowVal) {
+    if (flowVal == null) return null;
+    final str = flowVal.toString().toLowerCase();
+    return FlowIntensity.values.firstWhere(
+      (e) => e.name == str,
+      orElse: () => FlowIntensity.medium,
+    );
+  }
+
+  static List<SymptomType> _parseSymptoms(dynamic symptomsVal) {
+    if (symptomsVal == null || symptomsVal is! List) return [];
+    return symptomsVal.map((s) {
+      final str = s.toString().toLowerCase();
+      return SymptomType.values.firstWhere(
+        (e) => e.name.toLowerCase() == str,
+        orElse: () => SymptomType.other,
+      );
+    }).toList();
+  }
+
+  static MoodType? _parseMood(dynamic moodVal) {
+    if (moodVal == null) return null;
+    final str = moodVal.toString().toLowerCase();
+    return MoodType.values.firstWhere(
+      (e) => e.name == str,
+      orElse: () => MoodType.neutral,
+    );
   }
 }

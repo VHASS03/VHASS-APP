@@ -6,6 +6,7 @@ class DailyLog {
   final MoodType? mood;
   final List<SymptomType> symptoms;
   final int waterIntakeMl; // millilitres
+  final int? energyLevel;
   final double? sleepHours;
   final double? weight;
   final String notes;
@@ -16,6 +17,7 @@ class DailyLog {
     this.mood,
     this.symptoms = const [],
     this.waterIntakeMl = 0,
+    this.energyLevel,
     this.sleepHours,
     this.weight,
     this.notes = '',
@@ -34,6 +36,7 @@ class DailyLog {
               .toList() ??
           [],
       waterIntakeMl: json['waterIntakeMl'] as int? ?? 0,
+      energyLevel: json['energyLevel'] as int?,
       sleepHours: (json['sleepHours'] as num?)?.toDouble(),
       weight: (json['weight'] as num?)?.toDouble(),
       notes: json['notes'] as String? ?? '',
@@ -51,6 +54,7 @@ class DailyLog {
       'mood': mood?.index,
       'symptoms': symptoms.map((s) => s.index).toList(),
       'waterIntakeMl': waterIntakeMl,
+      'energyLevel': energyLevel,
       'sleepHours': sleepHours,
       'weight': weight,
       'notes': notes,
@@ -64,6 +68,7 @@ class DailyLog {
     MoodType? mood,
     List<SymptomType>? symptoms,
     int? waterIntakeMl,
+    int? energyLevel,
     double? sleepHours,
     double? weight,
     String? notes,
@@ -74,6 +79,7 @@ class DailyLog {
       mood: mood ?? this.mood,
       symptoms: symptoms ?? this.symptoms,
       waterIntakeMl: waterIntakeMl ?? this.waterIntakeMl,
+      energyLevel: energyLevel ?? this.energyLevel,
       sleepHours: sleepHours ?? this.sleepHours,
       weight: weight ?? this.weight,
       notes: notes ?? this.notes,

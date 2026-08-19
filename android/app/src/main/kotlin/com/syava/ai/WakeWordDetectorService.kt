@@ -95,7 +95,7 @@ class WakeWordDetectorService : Service() {
             val model = WakeWordModel(
                 name = "help_me_out",
                 modelPath = "help_me_out.onnx", // Must be placed in android/app/src/main/assets/
-                threshold = 0.5f
+                threshold = 0.15f
             )
             wakeWordEngine = WakeWordEngine(
                 context = this,
