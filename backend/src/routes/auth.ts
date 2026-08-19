@@ -27,6 +27,15 @@ router.post(
     body('phone').isLength({ min: 10, max: 10 }).withMessage('Phone must be 10 digits'),
     body('email').optional().isEmail().withMessage('Please enter a valid email'),
     body('age').optional().isInt({ min: 13 }).withMessage('Age must be at least 13'),
+    body('admissionNumber').optional().trim(),
+    body('course').optional().trim(),
+    body('year').optional().trim(),
+    body('gender').optional().trim(),
+    body('residenceType').optional().trim(),
+    body('roomNumber').optional().trim(),
+    body('guardianName').optional().trim(),
+    body('guardianPhone').optional().trim(),
+    body('emergencyRelationship').optional().trim(),
     body('occupation').optional().notEmpty(),
     body('emergencyContacts').optional().isArray().withMessage('Emergency contacts must be an array'),
     body('emergencyContacts.*.name').optional().notEmpty(),
@@ -40,15 +49,39 @@ router.post(
         return;
       }
 
-      const { name, phone, email, age, occupation, emergencyContacts } = req.body;
+      const {
+        name,
+        phone,
+        admissionNumber,
+        email,
+        course,
+        year,
+        age,
+        gender,
+        residenceType,
+        roomNumber,
+        guardianName,
+        guardianPhone,
+        emergencyRelationship,
+        occupation,
+        emergencyContacts,
+      } = req.body;
 
       // Log incoming data for debugging
       console.log('📥 Signup request data:', {
         name,
         phone,
+        admissionNumber,
         email,
+        course,
+        year,
         age,
-        occupation,
+        gender,
+        residenceType,
+        roomNumber,
+        guardianName,
+        guardianPhone,
+        emergencyRelationship,
         emergencyContactsCount: emergencyContacts?.length || 0,
       });
 
@@ -104,7 +137,6 @@ router.post(
         console.log('✅ OTP stored in Redis');
       } catch (redisError: any) {
         console.warn('⚠️ Failed to store OTP in Redis (continuing anyway):', redisError.message);
-        // Continue with signup even if Redis fails - OTP will be returned in response for development
       }
 
       // Create user with unverified status
@@ -116,10 +148,16 @@ router.post(
           isPhoneVerified: false,
         };
 
-        // Only add optional fields if they have values
-        if (email && email.trim()) {
-          userData.email = email.trim();
-        }
+        if (admissionNumber && admissionNumber.trim()) userData.admissionNumber = admissionNumber.trim();
+        if (email && email.trim()) userData.email = email.trim();
+        if (course && course.trim()) userData.course = course.trim();
+        if (year && year.trim()) userData.year = year.trim();
+        if (gender && gender.trim()) userData.gender = gender.trim();
+        if (residenceType && residenceType.trim()) userData.residenceType = residenceType.trim();
+        if (roomNumber && roomNumber.trim()) userData.roomNumber = roomNumber.trim();
+        if (guardianName && guardianName.trim()) userData.guardianName = guardianName.trim();
+        if (guardianPhone && guardianPhone.trim()) userData.guardianPhone = guardianPhone.trim();
+        if (emergencyRelationship && emergencyRelationship.trim()) userData.emergencyRelationship = emergencyRelationship.trim();
         if (age) {
           const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
           if (!isNaN(parsedAge) && parsedAge > 0) {
@@ -496,6 +534,15 @@ router.get('/profile', authenticate, async (req: Request, res: Response): Promis
         name: user.name || '',
         email: user.email || '',
         age: user.age,
+        admissionNumber: user.admissionNumber || '',
+        course: user.course || '',
+        year: user.year || '',
+        gender: user.gender || '',
+        residenceType: user.residenceType || 'Day Scholar',
+        roomNumber: user.roomNumber || '',
+        guardianName: user.guardianName || '',
+        guardianPhone: user.guardianPhone || '',
+        emergencyRelationship: user.emergencyRelationship || '',
         occupation: user.occupation || '',
       },
     });
@@ -507,7 +554,8 @@ router.get('/profile', authenticate, async (req: Request, res: Response): Promis
 
 /**
  * PUT /api/auth/profile
- * Update authenticated user profile details (name, phone, email, age, occupation)
+ * Update authenticated user profile details
+ * Note: phone number cannot be edited for security reasons.
  */
 router.put('/profile', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -517,7 +565,21 @@ router.put('/profile', authenticate, async (req: Request, res: Response): Promis
       return;
     }
 
-    const { name, phone, email, age, occupation } = req.body;
+    const {
+      name,
+      email,
+      age,
+      admissionNumber,
+      course,
+      year,
+      gender,
+      residenceType,
+      roomNumber,
+      guardianName,
+      guardianPhone,
+      emergencyRelationship,
+      occupation,
+    } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -526,22 +588,17 @@ router.put('/profile', authenticate, async (req: Request, res: Response): Promis
     }
 
     if (name !== undefined) user.name = name.trim();
-    if (phone !== undefined) {
-      const cleanPhone = phone.trim();
-      if (!/^[0-9]{10}$/.test(cleanPhone)) {
-        res.status(400).json({ success: false, message: 'Phone must be exactly 10 digits' });
-        return;
-      }
-      // Check if phone number is used by another user
-      const existingUser = await User.findOne({ phone: cleanPhone, _id: { $ne: userId } });
-      if (existingUser) {
-        res.status(400).json({ success: false, message: 'Phone number already in use by another account' });
-        return;
-      }
-      user.phone = cleanPhone;
-    }
     if (email !== undefined) user.email = email.trim();
     if (age !== undefined && age !== null && age !== '') user.age = Number(age);
+    if (admissionNumber !== undefined) user.admissionNumber = admissionNumber.trim();
+    if (course !== undefined) user.course = course.trim();
+    if (year !== undefined) user.year = year.trim();
+    if (gender !== undefined) user.gender = gender.trim();
+    if (residenceType !== undefined) user.residenceType = residenceType.trim();
+    if (roomNumber !== undefined) user.roomNumber = roomNumber.trim();
+    if (guardianName !== undefined) user.guardianName = guardianName.trim();
+    if (guardianPhone !== undefined) user.guardianPhone = guardianPhone.trim();
+    if (emergencyRelationship !== undefined) user.emergencyRelationship = emergencyRelationship.trim();
     if (occupation !== undefined) user.occupation = occupation.trim();
 
     await user.save();
@@ -555,6 +612,15 @@ router.put('/profile', authenticate, async (req: Request, res: Response): Promis
         name: user.name || '',
         email: user.email || '',
         age: user.age,
+        admissionNumber: user.admissionNumber || '',
+        course: user.course || '',
+        year: user.year || '',
+        gender: user.gender || '',
+        residenceType: user.residenceType || 'Day Scholar',
+        roomNumber: user.roomNumber || '',
+        guardianName: user.guardianName || '',
+        guardianPhone: user.guardianPhone || '',
+        emergencyRelationship: user.emergencyRelationship || '',
         occupation: user.occupation || '',
       },
     });

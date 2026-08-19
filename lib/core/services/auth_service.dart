@@ -10,21 +10,57 @@ class AuthService {
   static Future<ApiResponse<Map<String, dynamic>>> signup({
     required String name,
     required String phone,
+    String? admissionNumber,
     String? email,
+    String? course,
+    String? year,
     String? age,
+    String? gender,
+    String? residenceType,
+    String? roomNumber,
+    String? guardianName,
+    String? guardianPhone,
+    String? emergencyRelationship,
     String? occupation,
     List<Map<String, String>>? emergencyContacts,
   }) async {
     final Map<String, dynamic> data = {'name': name, 'phone': phone};
 
+    if (admissionNumber != null && admissionNumber.isNotEmpty) {
+      data['admissionNumber'] = admissionNumber;
+    }
     if (email != null && email.isNotEmpty) {
       data['email'] = email;
+    }
+    if (course != null && course.isNotEmpty) {
+      data['course'] = course;
+    }
+    if (year != null && year.isNotEmpty) {
+      data['year'] = year;
     }
     if (age != null && age.isNotEmpty) {
       final parsedAge = int.tryParse(age);
       if (parsedAge != null) {
         data['age'] = parsedAge;
       }
+    }
+    if (gender != null && gender.isNotEmpty) {
+      data['gender'] = gender;
+    }
+    if (residenceType != null && residenceType.isNotEmpty) {
+      data['residenceType'] = residenceType;
+    }
+    if (roomNumber != null && roomNumber.isNotEmpty) {
+      data['roomNumber'] = roomNumber;
+    }
+    if (guardianName != null && guardianName.isNotEmpty) {
+      data['guardianName'] = guardianName;
+    }
+    if (guardianPhone != null && guardianPhone.isNotEmpty) {
+      data['guardianPhone'] = guardianPhone;
+    }
+    if (emergencyRelationship != null && emergencyRelationship.isNotEmpty) {
+      data['emergencyRelationship'] = emergencyRelationship;
     }
     if (occupation != null && occupation.isNotEmpty) {
       data['occupation'] = occupation;
@@ -177,16 +213,34 @@ class AuthService {
   /// Update user profile details
   static Future<ApiResponse<Map<String, dynamic>>> updateProfile({
     String? name,
-    String? phone,
     String? email,
     String? age,
+    String? admissionNumber,
+    String? course,
+    String? year,
+    String? gender,
+    String? residenceType,
+    String? roomNumber,
+    String? guardianName,
+    String? guardianPhone,
+    String? emergencyRelationship,
     String? occupation,
   }) async {
     final Map<String, dynamic> body = {};
     if (name != null) body['name'] = name;
-    if (phone != null) body['phone'] = phone;
     if (email != null) body['email'] = email;
     if (age != null && age.isNotEmpty) body['age'] = age;
+    if (admissionNumber != null) body['admissionNumber'] = admissionNumber;
+    if (course != null) body['course'] = course;
+    if (year != null) body['year'] = year;
+    if (gender != null) body['gender'] = gender;
+    if (residenceType != null) body['residenceType'] = residenceType;
+    if (roomNumber != null) body['roomNumber'] = roomNumber;
+    if (guardianName != null) body['guardianName'] = guardianName;
+    if (guardianPhone != null) body['guardianPhone'] = guardianPhone;
+    if (emergencyRelationship != null) {
+      body['emergencyRelationship'] = emergencyRelationship;
+    }
     if (occupation != null) body['occupation'] = occupation;
 
     return await ApiService.put<Map<String, dynamic>>('/auth/profile', body);

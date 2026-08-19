@@ -26,7 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<PeriodLog> _periodLogs = [];
   List<DailyLog> _dailyLogs = [];
   List<CycleData> _cycleHistory = [];
-  DateTime _lastPeriodStart = DateTime.now().subtract(const Duration(days: 5));
+  DateTime _lastPeriodStart = DateTime.now();
 
   @override
   void initState() {
@@ -40,8 +40,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final dailyLogs = await WellnessTrackerService.getDailyLogs();
     final cycleHistory = await WellnessTrackerService.getCycleHistory();
 
-    // Determine last period start from logged data or default
-    DateTime lastStart = DateTime.now().subtract(const Duration(days: 5));
+    // Determine last period start reactively from settings & DB logs
+    DateTime lastStart = settings.lastPeriodDate ?? DateTime.now();
     if (periodLogs.isNotEmpty) {
       // Find earliest log in the most recent contiguous period block
       final sorted = List<PeriodLog>.from(periodLogs)
@@ -57,6 +57,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           break;
         }
       }
+    } else if (settings.lastPeriodDate != null) {
+      lastStart = settings.lastPeriodDate!;
     } else if (cycleHistory.isNotEmpty) {
       lastStart = cycleHistory.first.startDate;
     }

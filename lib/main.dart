@@ -17,33 +17,50 @@ import 'screens/home/home.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize notifications for SOS alerts
-  await NotificationService.initialize();
-  
-  // Initialize period notification service for wellness support
-  await PeriodNotificationService.initialize();
-  
-  // Initialize health reminder service for water/posture/wellness notifications
-  await HealthReminderService.initialize();
+  bool isLoggedIn = false;
+  try {
+    isLoggedIn = await StorageService.isLoggedIn();
+  } catch (e) {
+    print('⚠️ Failed to read login status on startup: $e');
+  }
 
-  // Initialize SOS alert service to listen for incoming alerts from contacts
+  // Launch UI immediately so app boots without hanging on mobile
+  runApp(MyApp(isLoggedIn: isLoggedIn));
+
+  // Run background service initializations asynchronously
+  _initializeServicesAsync();
+}
+
+/// Initialize background services & permissions after UI mounts to ensure fast mobile boot
+Future<void> _initializeServicesAsync() async {
+  try {
+    await NotificationService.initialize();
+  } catch (e) {
+    print('⚠️ Failed to initialize NotificationService: $e');
+  }
+
+  try {
+    await PeriodNotificationService.initialize();
+  } catch (e) {
+    print('⚠️ Failed to initialize PeriodNotificationService: $e');
+  }
+
+  try {
+    await HealthReminderService.initialize();
+  } catch (e) {
+    print('⚠️ Failed to initialize HealthReminderService: $e');
+  }
+
   _initializeSOSAlertService();
-
-  // Pre-fetch emergency contacts in the background so SOS can call instantly
   _prefetchEmergencyContacts();
-  
-  // Check and send period notifications if user is on period
   _checkPeriodNotifications();
-  
-  // Start health reminders (water, posture, eye breaks, etc.)
   _startHealthReminders();
 
-  // Request permissions on app startup
-  await _requestPermissions();
-
-  final isLoggedIn = await StorageService.isLoggedIn();
-
-  runApp(MyApp(isLoggedIn: isLoggedIn));
+  try {
+    await _requestPermissions();
+  } catch (e) {
+    print('⚠️ Failed to request startup permissions: $e');
+  }
 }
 
 /// Initialize SOS alert service to receive alerts from contacts

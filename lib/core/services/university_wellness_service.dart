@@ -204,64 +204,8 @@ Navigating relationships at university is vital for social support and personal 
       ),
     ]);
 
-    // Wellness Events & Workshops
-    _events.addAll([
-      WellnessEvent(
-        id: "e1",
-        title: "Mindfulness & Stress Management Seminar",
-        description: "Join us for a guided meditation session and learn cognitive techniques to manage final exam stress.",
-        date: DateTime.now().add(const Duration(days: 2)),
-        time: "02:00 PM - 03:30 PM",
-        location: "Seminar Hall C & Zoom",
-        speaker: "Dr. Alaric Saltzman",
-        imageUrl: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400",
-      ),
-      WellnessEvent(
-        id: "e2",
-        title: "Crisis Intervention & Mental Well-being Workshop",
-        description: "A specialized workshop for peer educators and student leaders on identifying mental distress in peers and routing support.",
-        date: DateTime.now().add(const Duration(days: 5)),
-        time: "10:00 AM - 01:00 PM",
-        location: "Wellness Lounge, Campus Block A",
-        speaker: "Dr. Stefan Salvatore & Dr. Elena Gilbert",
-        imageUrl: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400",
-      ),
-    ]);
-
-    // Initial Appointments
-    _appointments.addAll([
-      Appointment(
-        id: "ap1",
-        studentName: "John Doe",
-        studentPhone: "+1 (555) 019-2834",
-        concern: "Anxiety Support",
-        date: DateTime.now().add(const Duration(days: 1)),
-        timeSlot: "10:00 AM",
-        counsellor: _counsellors[0],
-        status: "Approved",
-      ),
-      Appointment(
-        id: "ap2",
-        studentName: "Jane Smith",
-        studentPhone: "+1 (555) 018-9281",
-        concern: "Academic Pressure Support",
-        date: DateTime.now().add(const Duration(days: 2)),
-        timeSlot: "11:00 AM",
-        counsellor: _counsellors[1],
-        status: "Pending",
-      ),
-      Appointment(
-        id: "ap3",
-        studentName: "Alex Vance",
-        studentPhone: "+1 (555) 014-4421",
-        concern: "Crisis Intervention",
-        date: DateTime.now(),
-        timeSlot: "02:30 PM",
-        counsellor: _counsellors[2],
-        status: "Approved",
-        isHighPriority: true,
-      ),
-    ]);
+    // Wellness Events & Workshops are fetched dynamically from DB (defaults to empty list if none in DB)
+    // Appointments are fetched dynamically from DB per logged-in student
   }
 
   // --- ACTIONS ---
@@ -322,36 +266,73 @@ Navigating relationships at university is vital for social support and personal 
     return counsellor.availability;
   }
 
+  Future<List<Counsellor>> fetchCounsellors() async {
+    try {
+      final response = await ApiService.get<dynamic>('/wellness/counsellors');
+      if (response.success && response.data != null) {
+        final List list = response.data;
+        if (list.isNotEmpty) {
+          _counsellors.clear();
+          for (var item in list) {
+            _counsellors.add(Counsellor(
+              id: item['_id']?.toString() ?? '',
+              name: item['name']?.toString() ?? 'Counsellor',
+              specialization: item['specialization']?.toString() ?? 'General Counselling',
+              imageUrl: item['imageUrl']?.toString() ?? 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150',
+              rating: (item['rating'] as num?)?.toDouble() ?? 4.8,
+              availability: (item['availability'] as List?)?.map((e) => e.toString()).toList() ?? ["09:00 AM", "11:00 AM"],
+              email: item['email']?.toString() ?? '',
+            ));
+          }
+        }
+      }
+    } catch (e) {
+      print("❌ Error fetching counsellors: $e");
+    }
+    return _counsellors;
+  }
+
   Future<List<Appointment>> fetchAppointments() async {
     try {
-      final response = await ApiService.get<dynamic>(
-        '/appointments',
-      );
+      await fetchCounsellors();
+      final response = await ApiService.get<dynamic>('/wellness/appointments');
       if (response.success && response.data != null) {
-        final dynamic list = response.data;
-        if (list is List) {
-          _appointments.clear();
-          for (var item in list) {
-            try {
-              final counsellorId = item['counsellor']?.toString() ?? '';
-              final c = _counsellors.firstWhere((c) => c.id == counsellorId, orElse: () => _counsellors.first);
-              final appDate = DateTime.tryParse(item['date']?.toString() ?? '') ?? DateTime.now();
-              final startTime = item['startTime']?.toString() ?? '';
-              
-              _appointments.add(Appointment(
-                id: item['_id']?.toString() ?? '',
-                studentName: item['studentName']?.toString() ?? 'Student',
-                studentPhone: item['studentPhone']?.toString() ?? '',
-                concern: item['notes']?.toString() ?? 'General Support',
-                date: appDate,
-                timeSlot: startTime,
-                counsellor: c,
-                status: item['status']?.toString() ?? 'Pending',
-                isHighPriority: item['type']?.toString() == 'emergency',
-              ));
-            } catch (e) {
-              print("❌ Error parsing appointment: $e");
+        final List list = response.data;
+        _appointments.clear();
+        for (var item in list) {
+          try {
+            final counsellorObj = item['counsellorId'];
+            String cId = '';
+            if (counsellorObj is Map) {
+              cId = counsellorObj['_id']?.toString() ?? '';
+            } else {
+              cId = counsellorObj?.toString() ?? '';
             }
+            final c = _counsellors.firstWhere((element) => element.id == cId, orElse: () => _counsellors.isNotEmpty ? _counsellors.first : Counsellor(
+              id: 'c1',
+              name: 'Dr. Elena Gilbert',
+              specialization: 'Mental Health Specialist',
+              imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150',
+              rating: 4.9,
+              availability: ["09:00 AM", "10:00 AM"],
+              email: "elena@university.edu",
+            ));
+            final appDate = DateTime.tryParse(item['date']?.toString() ?? '') ?? DateTime.now();
+            final timeSlot = item['timeSlot']?.toString() ?? '10:00 AM';
+
+            _appointments.add(Appointment(
+              id: item['_id']?.toString() ?? '',
+              studentName: item['studentName']?.toString() ?? 'Student',
+              studentPhone: item['studentPhone']?.toString() ?? '',
+              concern: item['concern']?.toString() ?? 'General Support',
+              date: appDate,
+              timeSlot: timeSlot,
+              counsellor: c,
+              status: item['status']?.toString() ?? 'Pending',
+              isHighPriority: item['isHighPriority'] == true,
+            ));
+          } catch (e) {
+            print("❌ Error parsing appointment: $e");
           }
         }
       }
@@ -370,27 +351,21 @@ Navigating relationships at university is vital for social support and personal 
     required Counsellor counsellor,
     bool isHighPriority = false,
   }) async {
-    final studentId = await StorageService.getUserId() ?? "65b9fc0e5e0423c10b7f8abc";
-    final startTime = _parseTo24h(timeSlot);
-    final endTime = _calculateEndTime(startTime);
-    final isoDateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}T00:00:00.000Z";
-
     final payload = {
-      "student": studentId,
-      "counsellor": counsellor.id,
-      "date": isoDateStr,
-      "startTime": startTime,
-      "endTime": endTime,
-      "type": isHighPriority ? "emergency" : "scheduled",
-      "notes": concern,
-      "status": "pending"
+      "counsellorId": counsellor.id,
+      "studentName": studentName,
+      "studentPhone": studentPhone,
+      "concern": concern,
+      "date": date.toIso8601String(),
+      "timeSlot": timeSlot,
+      "isHighPriority": isHighPriority,
     };
 
     Appointment newAp;
     try {
-      final response = await ApiService.post<dynamic>('/appointments', payload);
+      final response = await ApiService.post<dynamic>('/wellness/appointments', payload);
       if (response.success && response.data != null) {
-        final dynamic data = response.data;
+        final data = response.data;
         newAp = Appointment(
           id: data['_id']?.toString() ?? "ap_${DateTime.now().millisecondsSinceEpoch}",
           studentName: studentName,
@@ -399,7 +374,7 @@ Navigating relationships at university is vital for social support and personal 
           date: date,
           timeSlot: timeSlot,
           counsellor: counsellor,
-          status: "Pending",
+          status: data['status']?.toString() ?? "Pending",
           isHighPriority: isHighPriority,
         );
       } else {
@@ -424,14 +399,82 @@ Navigating relationships at university is vital for social support and personal 
     return newAp;
   }
 
+  Future<void> rescheduleAppointment(String appointmentId, DateTime newDate, String newTimeSlot) async {
+    try {
+      await ApiService.put('/wellness/appointments/$appointmentId', {
+        'date': newDate.toIso8601String(),
+        'timeSlot': newTimeSlot,
+        'status': 'Rescheduled',
+      });
+      final idx = _appointments.indexWhere((a) => a.id == appointmentId);
+      if (idx != -1) {
+        final existing = _appointments[idx];
+        _appointments[idx] = Appointment(
+          id: existing.id,
+          studentName: existing.studentName,
+          studentPhone: existing.studentPhone,
+          concern: existing.concern,
+          date: newDate,
+          timeSlot: newTimeSlot,
+          counsellor: existing.counsellor,
+          status: "Rescheduled",
+          isHighPriority: existing.isHighPriority,
+        );
+      }
+    } catch (e) {
+      print("❌ Error rescheduling appointment: $e");
+    }
+  }
+
   Future<void> updateAppointmentStatus(String id, String status) async {
+    try {
+      await ApiService.put('/wellness/appointments/$id', {
+        'status': status,
+      });
+    } catch (e) {
+      print("❌ Error updating status: $e");
+    }
     final idx = _appointments.indexWhere((a) => a.id == id);
     if (idx != -1) {
       _appointments[idx].status = status;
     }
   }
 
+  Future<List<WellnessEvent>> fetchEvents() async {
+    try {
+      final response = await ApiService.get<dynamic>('/wellness/events');
+      if (response.success && response.data != null) {
+        final List list = response.data;
+        _events.clear();
+        final userId = await StorageService.getUserId();
+        for (var item in list) {
+          final registeredUsers = (item['registeredUsers'] as List?)?.map((e) => e.toString()).toList() ?? [];
+          _events.add(WellnessEvent(
+            id: item['_id']?.toString() ?? '',
+            title: item['title']?.toString() ?? '',
+            description: item['description']?.toString() ?? '',
+            date: DateTime.tryParse(item['date']?.toString() ?? '') ?? DateTime.now(),
+            time: item['time']?.toString() ?? '',
+            location: item['location']?.toString() ?? '',
+            speaker: item['speaker']?.toString() ?? '',
+            imageUrl: item['imageUrl']?.toString() ?? '',
+            isRegistered: userId != null && registeredUsers.contains(userId),
+          ));
+        }
+      }
+    } catch (e) {
+      print("❌ Error fetching events: $e");
+      // If error or database has no events, _events stays empty (no fake hardcoded events)
+    }
+    return _events;
+  }
+
   Future<void> registerForEvent(String id) async {
+    try {
+      await ApiService.post('/wellness/events/$id/register', {});
+    } catch (e) {
+      print("❌ Error registering for event: $e");
+    }
     final idx = _events.indexWhere((e) => e.id == id);
     if (idx != -1) {
       _events[idx].isRegistered = true;

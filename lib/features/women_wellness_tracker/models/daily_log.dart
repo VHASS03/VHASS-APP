@@ -4,9 +4,9 @@ import '../constants/wellness_constants.dart';
 class DailyLog {
   final DateTime date;
   final MoodType? mood;
+  final int? energyLevel; // 1-5 or null
   final List<SymptomType> symptoms;
   final int waterIntakeMl; // millilitres
-  final int? energyLevel;
   final double? sleepHours;
   final double? weight;
   final String notes;
@@ -15,28 +15,58 @@ class DailyLog {
   DailyLog({
     required this.date,
     this.mood,
+    this.energyLevel,
     this.symptoms = const [],
     this.waterIntakeMl = 0,
-    this.energyLevel,
     this.sleepHours,
     this.weight,
     this.notes = '',
     this.medications = const [],
   });
 
+  /// Alias for waterIntakeMl
+  int get waterIntake => waterIntakeMl;
+
   /// Create from JSON map
   factory DailyLog.fromJson(Map<String, dynamic> json) {
+    MoodType? parseMood(dynamic val) {
+      if (val == null) return null;
+      if (val is int && val >= 0 && val < MoodType.values.length) {
+        return MoodType.values[val];
+      }
+      if (val is String) {
+        return MoodType.values.firstWhere(
+          (e) => e.name.toLowerCase() == val.toLowerCase(),
+          orElse: () => MoodType.neutral,
+        );
+      }
+      return null;
+    }
+
+    List<SymptomType> parseSymptoms(dynamic val) {
+      if (val is! List) return [];
+      final result = <SymptomType>[];
+      for (final s in val) {
+        if (s is int && s >= 0 && s < SymptomType.values.length) {
+          result.add(SymptomType.values[s]);
+        } else if (s is String) {
+          final found = SymptomType.values.where(
+            (e) => e.name.toLowerCase() == s.toLowerCase(),
+          );
+          if (found.isNotEmpty) result.add(found.first);
+        }
+      }
+      return result;
+    }
+
+    final rawWater = json['waterIntakeMl'] ?? json['waterIntake'];
+
     return DailyLog(
       date: DateTime.parse(json['date'] as String),
-      mood: json['mood'] != null
-          ? MoodType.values[json['mood'] as int]
-          : null,
-      symptoms: (json['symptoms'] as List<dynamic>?)
-              ?.map((s) => SymptomType.values[s as int])
-              .toList() ??
-          [],
-      waterIntakeMl: json['waterIntakeMl'] as int? ?? 0,
-      energyLevel: json['energyLevel'] as int?,
+      mood: parseMood(json['mood']),
+      energyLevel: (json['energyLevel'] as num?)?.toInt(),
+      symptoms: parseSymptoms(json['symptoms']),
+      waterIntakeMl: rawWater != null ? (rawWater as num).toInt() : 0,
       sleepHours: (json['sleepHours'] as num?)?.toDouble(),
       weight: (json['weight'] as num?)?.toDouble(),
       notes: json['notes'] as String? ?? '',
@@ -52,9 +82,10 @@ class DailyLog {
     return {
       'date': date.toIso8601String(),
       'mood': mood?.index,
+      'energyLevel': energyLevel,
       'symptoms': symptoms.map((s) => s.index).toList(),
       'waterIntakeMl': waterIntakeMl,
-      'energyLevel': energyLevel,
+      'waterIntake': waterIntakeMl,
       'sleepHours': sleepHours,
       'weight': weight,
       'notes': notes,
@@ -66,6 +97,7 @@ class DailyLog {
   DailyLog copyWith({
     DateTime? date,
     MoodType? mood,
+    int? energyLevel,
     List<SymptomType>? symptoms,
     int? waterIntakeMl,
     int? energyLevel,
@@ -77,6 +109,7 @@ class DailyLog {
     return DailyLog(
       date: date ?? this.date,
       mood: mood ?? this.mood,
+      energyLevel: energyLevel ?? this.energyLevel,
       symptoms: symptoms ?? this.symptoms,
       waterIntakeMl: waterIntakeMl ?? this.waterIntakeMl,
       energyLevel: energyLevel ?? this.energyLevel,

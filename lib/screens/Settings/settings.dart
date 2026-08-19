@@ -311,397 +311,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showProfileDialog() {
-    final nameController = TextEditingController(text: _userName ?? '');
-    final phoneController = TextEditingController(text: _userPhone ?? '');
-    bool isEditing = false;
-    bool isSaving = false;
-
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              contentPadding: EdgeInsets.zero,
-              content: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.85,
-                  decoration: BoxDecoration(color: Theme.of(context).cardColor),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Header with Gradient and Avatar
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 24,
-                            horizontal: 16,
-                          ),
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [AppColors.primary, AppColors.lavender],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 3,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.15),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 40,
-                                    backgroundColor: Colors.white.withOpacity(0.2),
-                                    child: Text(
-                                      (nameController.text.isNotEmpty)
-                                          ? nameController.text[0].toUpperCase()
-                                          : 'U',
-                                      style: const TextStyle(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  nameController.text.isNotEmpty
-                                      ? nameController.text
-                                      : 'User Profile',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  phoneController.text.isNotEmpty
-                                      ? phoneController.text
-                                      : 'No Phone Number',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.85),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // Body section: view mode or edit mode
-                        Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: isEditing
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      "Full Name",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    TextField(
-                                      controller: nameController,
-                                      decoration: InputDecoration(
-                                        prefixIcon: const Icon(Icons.person_outline),
-                                        hintText: "Enter full name",
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      "Phone Number",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    TextField(
-                                      controller: phoneController,
-                                      keyboardType: TextInputType.phone,
-                                      decoration: InputDecoration(
-                                        prefixIcon: const Icon(Icons.phone_android),
-                                        hintText: "10-digit phone number",
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Column(
-                                  children: [
-                                    _buildProfileDetailRow(
-                                      icon: Icons.person_outline,
-                                      label: "Full Name",
-                                      value: nameController.text.isNotEmpty
-                                          ? nameController.text
-                                          : 'Not specified',
-                                    ),
-                                    const Divider(height: 24),
-                                    _buildProfileDetailRow(
-                                      icon: Icons.phone_android,
-                                      label: "Phone Number",
-                                      value: phoneController.text.isNotEmpty
-                                          ? phoneController.text
-                                          : 'Not specified',
-                                    ),
-                                  ],
-                                ),
-                        ),
-
-                        // Action buttons
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: 20,
-                            left: 24,
-                            right: 24,
-                          ),
-                          child: Row(
-                            children: [
-                              if (isEditing) ...[
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: isSaving
-                                        ? null
-                                        : () {
-                                            setModalState(() {
-                                              isEditing = false;
-                                              nameController.text = _userName ?? '';
-                                              phoneController.text = _userPhone ?? '';
-                                            });
-                                          },
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    child: const Text('Cancel'),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: isSaving
-                                        ? null
-                                        : () async {
-                                            final newName = nameController.text.trim();
-                                            final newPhone = phoneController.text.trim();
-
-                                            if (newName.isEmpty) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Name cannot be empty'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                              return;
-                                            }
-                                            if (newPhone.length != 10) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Phone number must be 10 digits'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                              return;
-                                            }
-
-                                            setModalState(() => isSaving = true);
-
-                                            try {
-                                              final response = await AuthService.updateProfile(
-                                                name: newName,
-                                                phone: newPhone,
-                                              );
-
-                                              await StorageService.setUserName(newName);
-                                              await StorageService.setPhone(newPhone);
-
-                                              setState(() {
-                                                _userName = newName;
-                                                _userPhone = newPhone;
-                                              });
-
-                                              if (mounted) {
-                                                Navigator.pop(context);
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      response.message ?? 'Profile updated successfully',
-                                                    ),
-                                                    backgroundColor: Colors.green,
-                                                  ),
-                                                );
-                                              }
-                                            } catch (e) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Error updating profile: $e'),
-                                                    backgroundColor: Colors.red,
-                                                  ),
-                                                );
-                                              }
-                                            } finally {
-                                              setModalState(() => isSaving = false);
-                                            }
-                                          },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    child: isSaving
-                                        ? const SizedBox(
-                                            height: 20,
-                                            width: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Text(
-                                            'Save',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ] else ...[
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () {
-                                      setModalState(() => isEditing = true);
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.edit, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Edit Profile'),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Close',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildProfileDetailRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    bool isCode = false,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: AppColors.primary, size: 22),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: isCode ? 'monospace' : null,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+      builder: (context) => const _UserProfileDialog(),
+    ).then((_) => _loadUserData());
   }
 
   void _showHealthReminderSettings() {
@@ -713,6 +327,469 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => const _HealthReminderSettingsSheet(),
+    );
+  }
+}
+
+class _UserProfileDialog extends StatefulWidget {
+  const _UserProfileDialog();
+
+  @override
+  State<_UserProfileDialog> createState() => _UserProfileDialogState();
+}
+
+class _UserProfileDialogState extends State<_UserProfileDialog> {
+  bool _isLoading = true;
+  bool _isEditing = false;
+  bool _isSaving = false;
+
+  late TextEditingController _nameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _admissionNumberController;
+  late TextEditingController _emailController;
+  late TextEditingController _ageController;
+  late TextEditingController _roomNumberController;
+  late TextEditingController _guardianNameController;
+  late TextEditingController _guardianPhoneController;
+
+  String _selectedCourse = 'B.Tech';
+  String _selectedYear = '1st Year';
+  String _selectedGender = 'Female';
+  String _residenceType = 'Hosteller';
+  String _selectedRelationship = 'Parent';
+
+  final List<String> _courseOptions = [
+    'B.Tech',
+    'M.Tech',
+    'B.Sc',
+    'M.Sc',
+    'BCA',
+    'MCA',
+    'BBA',
+    'MBA',
+    'B.Com',
+    'MBBS',
+    'PhD',
+    'Other',
+  ];
+
+  final List<String> _yearOptions = [
+    '1st Year',
+    '2nd Year',
+    '3rd Year',
+    '4th Year',
+    '5th Year',
+    'Post Graduate',
+  ];
+
+  final List<String> _genderOptions = ['Female', 'Male', 'Other'];
+  final List<String> _relationshipOptions = [
+    'Parent',
+    'Sibling',
+    'Guardian',
+    'Relative',
+    'Friend',
+    'Other',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _admissionNumberController = TextEditingController();
+    _emailController = TextEditingController();
+    _ageController = TextEditingController();
+    _roomNumberController = TextEditingController();
+    _guardianNameController = TextEditingController();
+    _guardianPhoneController = TextEditingController();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final response = await AuthService.getProfile();
+      if (response.success && response.data != null && response.data!['user'] != null) {
+        final u = response.data!['user'] as Map<String, dynamic>;
+        setState(() {
+          _nameController.text = u['name']?.toString() ?? '';
+          _phoneController.text = u['phone']?.toString() ?? '';
+          _admissionNumberController.text = u['admissionNumber']?.toString() ?? '';
+          _emailController.text = u['email']?.toString() ?? '';
+          _ageController.text = u['age']?.toString() ?? '';
+          _roomNumberController.text = u['roomNumber']?.toString() ?? '';
+          _guardianNameController.text = u['guardianName']?.toString() ?? '';
+          _guardianPhoneController.text = u['guardianPhone']?.toString() ?? '';
+
+          if (u['course'] != null && _courseOptions.contains(u['course'])) {
+            _selectedCourse = u['course'];
+          }
+          if (u['year'] != null && _yearOptions.contains(u['year'])) {
+            _selectedYear = u['year'];
+          }
+          if (u['gender'] != null && _genderOptions.contains(u['gender'])) {
+            _selectedGender = u['gender'];
+          }
+          if (u['residenceType'] != null) {
+            _residenceType = u['residenceType'];
+          }
+          if (u['emergencyRelationship'] != null &&
+              _relationshipOptions.contains(u['emergencyRelationship'])) {
+            _selectedRelationship = u['emergencyRelationship'];
+          }
+          _isLoading = false;
+        });
+      } else {
+        // Fallback to local storage
+        final localName = await StorageService.getUserName();
+        final localPhone = await StorageService.getPhone();
+        setState(() {
+          _nameController.text = localName ?? '';
+          _phoneController.text = localPhone ?? '';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _admissionNumberController.dispose();
+    _emailController.dispose();
+    _ageController.dispose();
+    _roomNumberController.dispose();
+    _guardianNameController.dispose();
+    _guardianPhoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Full name cannot be empty'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final response = await AuthService.updateProfile(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        age: _ageController.text.trim(),
+        admissionNumber: _admissionNumberController.text.trim(),
+        course: _selectedCourse,
+        year: _selectedYear,
+        gender: _selectedGender,
+        residenceType: _residenceType,
+        roomNumber: _residenceType == 'Hosteller' ? _roomNumberController.text.trim() : null,
+        guardianName: _guardianNameController.text.trim(),
+        guardianPhone: _guardianPhoneController.text.trim(),
+        emergencyRelationship: _selectedRelationship,
+      );
+
+      if (response.success) {
+        await StorageService.setUserName(_nameController.text.trim());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
+          );
+          setState(() {
+            _isEditing = false;
+            _isSaving = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(response.message ?? 'Failed to update profile'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+          decoration: BoxDecoration(color: theme.cardColor),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Gradient
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.lavender],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundColor: Colors.white.withOpacity(0.25),
+                      child: Text(
+                        _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'U',
+                        style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _nameController.text.isNotEmpty ? _nameController.text : 'User Profile',
+                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.lock, color: Colors.white70, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          _phoneController.text.isNotEmpty ? _phoneController.text : 'No phone',
+                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content Body
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_isEditing) ...[
+                              // --- EDIT MODE ---
+                              _buildSectionTitle("PERSONAL & ACADEMIC"),
+                              const SizedBox(height: 10),
+                              _buildTextField(_nameController, "Full Name", Icons.person_outline),
+                              const SizedBox(height: 10),
+
+                              // Locked phone number in edit mode
+                              TextField(
+                                controller: _phoneController,
+                                enabled: false,
+                                decoration: InputDecoration(
+                                  labelText: "Phone Number (Cannot be edited)",
+                                  prefixIcon: const Icon(Icons.lock, color: Colors.grey),
+                                  filled: true,
+                                  fillColor: isDark ? Colors.white10 : Colors.grey[200],
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _buildTextField(_admissionNumberController, "Admission / Roll Number", Icons.badge_outlined),
+                              const SizedBox(height: 10),
+                              _buildTextField(_emailController, "Email Address", Icons.email_outlined),
+                              const SizedBox(height: 10),
+                              _buildTextField(_ageController, "Age", Icons.cake_outlined, keyboard: TextInputType.number),
+                              const SizedBox(height: 10),
+                              _buildDropdownField("Course", _selectedCourse, _courseOptions, Icons.school_outlined, (v) => setState(() => _selectedCourse = v!)),
+                              const SizedBox(height: 10),
+                              _buildDropdownField("Year of Study", _selectedYear, _yearOptions, Icons.calendar_today_outlined, (v) => setState(() => _selectedYear = v!)),
+                              const SizedBox(height: 10),
+                              _buildDropdownField("Gender", _selectedGender, _genderOptions, Icons.wc_outlined, (v) => setState(() => _selectedGender = v!)),
+
+                              const SizedBox(height: 18),
+                              _buildSectionTitle("RESIDENCE"),
+                              const SizedBox(height: 10),
+                              _buildDropdownField("Residence Type", _residenceType, ['Hosteller', 'Day Scholar'], Icons.home_work_outlined, (v) => setState(() => _residenceType = v!)),
+                              if (_residenceType == 'Hosteller') ...[
+                                const SizedBox(height: 10),
+                                _buildTextField(_roomNumberController, "Room Number / Block", Icons.meeting_room_outlined),
+                              ],
+
+                              const SizedBox(height: 18),
+                              _buildSectionTitle("GUARDIAN DETAILS"),
+                              const SizedBox(height: 10),
+                              _buildTextField(_guardianNameController, "Guardian Name", Icons.family_restroom_outlined),
+                              const SizedBox(height: 10),
+                              _buildTextField(_guardianPhoneController, "Guardian Phone", Icons.contact_phone_outlined, keyboard: TextInputType.phone),
+                              const SizedBox(height: 10),
+                              _buildDropdownField("Emergency Relationship", _selectedRelationship, _relationshipOptions, Icons.people_outline, (v) => setState(() => _selectedRelationship = v!)),
+                            ] else ...[
+                              // --- VIEW MODE ---
+                              _buildSectionTitle("STUDENT & ACADEMIC"),
+                              const SizedBox(height: 10),
+                              _buildDetailRow(Icons.person_outline, "Full Name", _nameController.text),
+                              _buildDetailRow(Icons.lock_outline, "Phone Number", _phoneController.text, subtitle: "Phone number is fixed"),
+                              _buildDetailRow(Icons.badge_outlined, "Admission Number", _admissionNumberController.text),
+                              _buildDetailRow(Icons.email_outlined, "Email Address", _emailController.text),
+                              _buildDetailRow(Icons.cake_outlined, "Age & Gender", "${_ageController.text.isNotEmpty ? _ageController.text : 'N/A'} • $_selectedGender"),
+                              _buildDetailRow(Icons.school_outlined, "Course & Year", "$_selectedCourse ($_selectedYear)"),
+
+                              const SizedBox(height: 16),
+                              _buildSectionTitle("RESIDENCE"),
+                              const SizedBox(height: 10),
+                              _buildDetailRow(Icons.home_work_outlined, "Residence Type", _residenceType),
+                              if (_residenceType == 'Hosteller')
+                                _buildDetailRow(Icons.meeting_room_outlined, "Room / Block", _roomNumberController.text),
+
+                              const SizedBox(height: 16),
+                              _buildSectionTitle("GUARDIAN & EMERGENCY"),
+                              const SizedBox(height: 10),
+                              _buildDetailRow(Icons.family_restroom_outlined, "Guardian Name", _guardianNameController.text),
+                              _buildDetailRow(Icons.contact_phone_outlined, "Guardian Phone", _guardianPhoneController.text),
+                              _buildDetailRow(Icons.people_outline, "Emergency Relationship", _selectedRelationship),
+                            ],
+                          ],
+                        ),
+                      ),
+              ),
+
+              // Action Buttons
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    if (_isEditing) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _isSaving ? null : () => setState(() => _isEditing = false),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text("Cancel"),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: _isSaving
+                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text("Save Changes", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ] else ...[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => setState(() => _isEditing = true),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text("Edit Profile"),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text("Close", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value, {String? subtitle}) {
+    final displayValue = value.trim().isNotEmpty ? value : 'Not specified';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(displayValue, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                if (subtitle != null)
+                  Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.orange)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {TextInputType keyboard = TextInputType.text}) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboard,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildDropdownField(String label, String value, List<String> options, IconData icon, ValueChanged<String?> onChanged) {
+    return DropdownButtonFormField<String>(
+      value: options.contains(value) ? value : options.first,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      items: options.map((opt) => DropdownMenuItem(value: opt, child: Text(opt, style: const TextStyle(fontSize: 14)))).toList(),
+      onChanged: onChanged,
     );
   }
 }

@@ -40,8 +40,8 @@ class WellnessTrackerService {
 
         // 1. Settings
         final settings = WellnessSettings(
-          cycleLength: data['cycleLength'] ?? 28,
-          periodLength: data['periodLength'] ?? 5,
+          cycleLength: (data['cycleLength'] as num?)?.toInt() ?? 28,
+          periodLength: (data['periodLength'] as num?)?.toInt() ?? 5,
           lastPeriodDate: data['lastPeriodDate'] != null ? DateTime.tryParse(data['lastPeriodDate'] as String) : null,
           healthCondition: data['healthCondition'] ?? 'None',
         );
@@ -53,39 +53,33 @@ class WellnessTrackerService {
         // 2. Period Logs
         if (data['periodLogs'] != null) {
           final List<dynamic> pLogs = data['periodLogs'];
-          final parsedPeriodLogs = pLogs.map((e) => PeriodLog(
-            date: DateTime.parse(e['date'] as String),
-            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate'] as String) : null,
-            flow: _parseFlow(e['flow']),
-            symptoms: _parseSymptoms(e['symptoms']),
-            notes: e['notes'] as String? ?? '',
-          )).toList();
+          final parsedPeriodLogs = pLogs.map((e) => PeriodLog.fromJson(e as Map<String, dynamic>)).toList();
           await prefs.setString('${WellnessKeys.periodLogs}$uid', jsonEncode(parsedPeriodLogs.map((l) => l.toJson()).toList()));
         }
 
         // 3. Daily Logs
         if (data['dailyLogs'] != null) {
           final List<dynamic> dLogs = data['dailyLogs'];
-          final parsedDailyLogs = dLogs.map((e) => DailyLog(
-            date: DateTime.parse(e['date'] as String),
-            mood: _parseMood(e['mood']),
-            energyLevel: e['energyLevel'] != null ? (e['energyLevel'] as num).toInt() : null,
-            symptoms: _parseSymptoms(e['symptoms']),
-            notes: e['notes'] as String? ?? '',
-            waterIntakeMl: e['waterIntake'] != null ? (e['waterIntake'] as num).toInt() : 0,
-          )).toList();
+          final parsedDailyLogs = dLogs.map((e) => DailyLog.fromJson(e as Map<String, dynamic>)).toList();
           await prefs.setString('${WellnessKeys.dailyLogs}$uid', jsonEncode(parsedDailyLogs.map((l) => l.toJson()).toList()));
         }
 
         // 4. Cycle History
         if (data['cycleHistory'] != null) {
           final List<dynamic> cHistory = data['cycleHistory'];
-          final parsedCycles = cHistory.map((e) => CycleData(
-            startDate: DateTime.parse(e['startDate'] as String),
-            endDate: e['endDate'] != null ? DateTime.tryParse(e['endDate'] as String) : null,
-            cycleLength: e['cycleLength'] as int? ?? 28,
-            periodLength: e['periodLength'] as int? ?? 5,
-          )).toList();
+          final parsedCycles = cHistory.map((e) {
+            final start = DateTime.parse(e['startDate'] as String);
+            final periodLen = (e['periodLength'] as num?)?.toInt() ?? 5;
+            final end = e['endDate'] != null
+                ? (DateTime.tryParse(e['endDate'] as String) ?? start.add(Duration(days: periodLen)))
+                : start.add(Duration(days: periodLen));
+            return CycleData(
+              startDate: start,
+              endDate: end,
+              cycleLength: (e['cycleLength'] as num?)?.toInt() ?? 28,
+              periodLength: periodLen,
+            );
+          }).toList();
           await prefs.setString('${WellnessKeys.cycleHistory}$uid', jsonEncode(parsedCycles.map((c) => c.toJson()).toList()));
         }
 
