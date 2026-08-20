@@ -508,6 +508,13 @@ router.post(
           deviceType: device.deviceType,
         },
       });
+    } catch (error: any) {
+      console.error('Verify OTP error:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+);
+
 /**
  * GET /api/auth/profile
  * Get authenticated user profile details

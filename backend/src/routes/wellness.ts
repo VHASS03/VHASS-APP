@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import Wellness from '../models/Wellness';
+import Counsellor from '../models/Counsellor';
+import Appointment from '../models/Appointment';
+import WellnessEvent from '../models/WellnessEvent';
 
 const router = Router();
 
@@ -331,9 +334,11 @@ router.post('/sync', async (req: Request, res: Response): Promise<void> => {
       data: wellness,
       message: 'Data synced successfully',
     });
-import Counsellor from '../models/Counsellor';
-import Appointment from '../models/Appointment';
-import WellnessEvent from '../models/WellnessEvent';
+  } catch (error) {
+    console.error('Error syncing wellness data:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 /**
  * GET /api/wellness/counsellors
