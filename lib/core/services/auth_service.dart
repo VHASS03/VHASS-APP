@@ -13,6 +13,7 @@ class AuthService {
     String? admissionNumber,
     String? email,
     String? course,
+    String? department,
     String? year,
     String? age,
     String? gender,
@@ -34,6 +35,9 @@ class AuthService {
     }
     if (course != null && course.isNotEmpty) {
       data['course'] = course;
+    }
+    if (department != null && department.isNotEmpty) {
+      data['department'] = department;
     }
     if (year != null && year.isNotEmpty) {
       data['year'] = year;
@@ -217,6 +221,7 @@ class AuthService {
     String? age,
     String? admissionNumber,
     String? course,
+    String? department,
     String? year,
     String? gender,
     String? residenceType,
@@ -232,6 +237,7 @@ class AuthService {
     if (age != null && age.isNotEmpty) body['age'] = age;
     if (admissionNumber != null) body['admissionNumber'] = admissionNumber;
     if (course != null) body['course'] = course;
+    if (department != null) body['department'] = department;
     if (year != null) body['year'] = year;
     if (gender != null) body['gender'] = gender;
     if (residenceType != null) body['residenceType'] = residenceType;

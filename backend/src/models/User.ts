@@ -6,6 +6,7 @@ export interface IUser extends Document {
   admissionNumber?: string;
   email?: string;
   course?: string;
+  department?: string;
   year?: string;
   age?: number;
   gender?: string;
@@ -48,6 +49,11 @@ const UserSchema = new Schema<IUser>(
     },
     course: {
       type: String,
+      trim: true,
+    },
+    department: {
+      type: String,
+      enum: ['cse', 'ece', 'eee', 'mech', 'civil', 'bba'],
       trim: true,
     },
     year: {

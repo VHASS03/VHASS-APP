@@ -32,6 +32,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Selections
   String _selectedCourse = 'B.Tech';
+  String _selectedDepartment = 'cse';
   String _selectedYear = '1st Year';
   String _selectedGender = 'Female';
   String _residenceType = 'Hosteller'; // 'Hosteller' or 'Day Scholar'
@@ -54,6 +55,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
     'MBBS',
     'PhD',
     'Other',
+  ];
+
+  final List<String> _departmentOptions = [
+    'cse',
+    'ece',
+    'eee',
+    'mech',
+    'civil',
+    'bba',
   ];
 
   final List<String> _yearOptions = [
@@ -191,6 +201,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         admissionNumber: _admissionNumberController.text.trim(),
         email: _emailController.text.trim(),
         course: _selectedCourse,
+        department: _selectedDepartment,
         year: _selectedYear,
         age: _ageController.text.trim(),
         gender: _selectedGender,
@@ -464,6 +475,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         label: "Course / Degree",
                         icon: Icons.menu_book_outlined,
                         onChanged: (val) => setState(() => _selectedCourse = val!),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDropdownField(
+                        value: _selectedDepartment,
+                        items: _departmentOptions,
+                        label: "Department",
+                        icon: Icons.business_outlined,
+                        onChanged: (val) => setState(() => _selectedDepartment = val!),
                       ),
                       const SizedBox(height: 12),
                       _buildDropdownField(

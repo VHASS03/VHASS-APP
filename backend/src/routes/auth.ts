@@ -29,6 +29,7 @@ router.post(
     body('age').optional().isInt({ min: 13 }).withMessage('Age must be at least 13'),
     body('admissionNumber').optional().trim(),
     body('course').optional().trim(),
+    body('department').optional().trim().isIn(['cse', 'ece', 'eee', 'mech', 'civil', 'bba']).withMessage('Invalid department'),
     body('year').optional().trim(),
     body('gender').optional().trim(),
     body('residenceType').optional().trim(),
@@ -55,6 +56,7 @@ router.post(
         admissionNumber,
         email,
         course,
+        department,
         year,
         age,
         gender,
@@ -74,6 +76,7 @@ router.post(
         admissionNumber,
         email,
         course,
+        department,
         year,
         age,
         gender,
@@ -151,6 +154,7 @@ router.post(
         if (admissionNumber && admissionNumber.trim()) userData.admissionNumber = admissionNumber.trim();
         if (email && email.trim()) userData.email = email.trim();
         if (course && course.trim()) userData.course = course.trim();
+        if (department && department.trim()) userData.department = department.trim();
         if (year && year.trim()) userData.year = year.trim();
         if (gender && gender.trim()) userData.gender = gender.trim();
         if (residenceType && residenceType.trim()) userData.residenceType = residenceType.trim();
@@ -543,6 +547,7 @@ router.get('/profile', authenticate, async (req: Request, res: Response): Promis
         age: user.age,
         admissionNumber: user.admissionNumber || '',
         course: user.course || '',
+        department: user.department || '',
         year: user.year || '',
         gender: user.gender || '',
         residenceType: user.residenceType || 'Day Scholar',
@@ -578,6 +583,7 @@ router.put('/profile', authenticate, async (req: Request, res: Response): Promis
       age,
       admissionNumber,
       course,
+      department,
       year,
       gender,
       residenceType,
@@ -599,6 +605,7 @@ router.put('/profile', authenticate, async (req: Request, res: Response): Promis
     if (age !== undefined && age !== null && age !== '') user.age = Number(age);
     if (admissionNumber !== undefined) user.admissionNumber = admissionNumber.trim();
     if (course !== undefined) user.course = course.trim();
+    if (department !== undefined) user.department = department.trim();
     if (year !== undefined) user.year = year.trim();
     if (gender !== undefined) user.gender = gender.trim();
     if (residenceType !== undefined) user.residenceType = residenceType.trim();
@@ -621,6 +628,7 @@ router.put('/profile', authenticate, async (req: Request, res: Response): Promis
         age: user.age,
         admissionNumber: user.admissionNumber || '',
         course: user.course || '',
+        department: user.department || '',
         year: user.year || '',
         gender: user.gender || '',
         residenceType: user.residenceType || 'Day Scholar',

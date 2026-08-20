@@ -9,8 +9,6 @@ class WellnessSettings {
   final bool dailyLogReminder;
   final int reminderHour; // 0-23
   final int reminderMinute; // 0-59
-  final DateTime? lastPeriodDate;
-  final String? healthCondition;
 
   WellnessSettings({
     this.cycleLength = 28,
@@ -22,8 +20,6 @@ class WellnessSettings {
     this.dailyLogReminder = false,
     this.reminderHour = 9,
     this.reminderMinute = 0,
-    this.lastPeriodDate,
-    this.healthCondition = 'None',
   });
 
   /// Create from JSON map
@@ -38,10 +34,6 @@ class WellnessSettings {
       dailyLogReminder: json['dailyLogReminder'] as bool? ?? false,
       reminderHour: json['reminderHour'] as int? ?? 9,
       reminderMinute: json['reminderMinute'] as int? ?? 0,
-      lastPeriodDate: json['lastPeriodDate'] != null
-          ? DateTime.tryParse(json['lastPeriodDate'] as String)
-          : null,
-      healthCondition: json['healthCondition'] as String? ?? 'None',
     );
   }
 
@@ -57,8 +49,6 @@ class WellnessSettings {
       'dailyLogReminder': dailyLogReminder,
       'reminderHour': reminderHour,
       'reminderMinute': reminderMinute,
-      'lastPeriodDate': lastPeriodDate?.toIso8601String(),
-      'healthCondition': healthCondition,
     };
   }
 
@@ -73,8 +63,6 @@ class WellnessSettings {
     bool? dailyLogReminder,
     int? reminderHour,
     int? reminderMinute,
-    DateTime? lastPeriodDate,
-    String? healthCondition,
   }) {
     return WellnessSettings(
       cycleLength: cycleLength ?? this.cycleLength,
@@ -86,8 +74,6 @@ class WellnessSettings {
       dailyLogReminder: dailyLogReminder ?? this.dailyLogReminder,
       reminderHour: reminderHour ?? this.reminderHour,
       reminderMinute: reminderMinute ?? this.reminderMinute,
-      lastPeriodDate: lastPeriodDate ?? this.lastPeriodDate,
-      healthCondition: healthCondition ?? this.healthCondition,
     );
   }
 }

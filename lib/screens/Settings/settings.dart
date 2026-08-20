@@ -353,6 +353,7 @@ class _UserProfileDialogState extends State<_UserProfileDialog> {
   late TextEditingController _guardianPhoneController;
 
   String _selectedCourse = 'B.Tech';
+  String _selectedDepartment = 'cse';
   String _selectedYear = '1st Year';
   String _selectedGender = 'Female';
   String _residenceType = 'Hosteller';
@@ -371,6 +372,15 @@ class _UserProfileDialogState extends State<_UserProfileDialog> {
     'MBBS',
     'PhD',
     'Other',
+  ];
+
+  final List<String> _departmentOptions = [
+    'cse',
+    'ece',
+    'eee',
+    'mech',
+    'civil',
+    'bba',
   ];
 
   final List<String> _yearOptions = [
@@ -423,6 +433,9 @@ class _UserProfileDialogState extends State<_UserProfileDialog> {
 
           if (u['course'] != null && _courseOptions.contains(u['course'])) {
             _selectedCourse = u['course'];
+          }
+          if (u['department'] != null && _departmentOptions.contains(u['department'])) {
+            _selectedDepartment = u['department'];
           }
           if (u['year'] != null && _yearOptions.contains(u['year'])) {
             _selectedYear = u['year'];
@@ -484,6 +497,7 @@ class _UserProfileDialogState extends State<_UserProfileDialog> {
         age: _ageController.text.trim(),
         admissionNumber: _admissionNumberController.text.trim(),
         course: _selectedCourse,
+        department: _selectedDepartment,
         year: _selectedYear,
         gender: _selectedGender,
         residenceType: _residenceType,
@@ -617,6 +631,8 @@ class _UserProfileDialogState extends State<_UserProfileDialog> {
                               const SizedBox(height: 10),
                               _buildDropdownField("Course", _selectedCourse, _courseOptions, Icons.school_outlined, (v) => setState(() => _selectedCourse = v!)),
                               const SizedBox(height: 10),
+                              _buildDropdownField("Department", _selectedDepartment, _departmentOptions, Icons.business_outlined, (v) => setState(() => _selectedDepartment = v!)),
+                              const SizedBox(height: 10),
                               _buildDropdownField("Year of Study", _selectedYear, _yearOptions, Icons.calendar_today_outlined, (v) => setState(() => _selectedYear = v!)),
                               const SizedBox(height: 10),
                               _buildDropdownField("Gender", _selectedGender, _genderOptions, Icons.wc_outlined, (v) => setState(() => _selectedGender = v!)),
@@ -648,6 +664,7 @@ class _UserProfileDialogState extends State<_UserProfileDialog> {
                               _buildDetailRow(Icons.email_outlined, "Email Address", _emailController.text),
                               _buildDetailRow(Icons.cake_outlined, "Age & Gender", "${_ageController.text.isNotEmpty ? _ageController.text : 'N/A'} • $_selectedGender"),
                               _buildDetailRow(Icons.school_outlined, "Course & Year", "$_selectedCourse ($_selectedYear)"),
+                              _buildDetailRow(Icons.business_outlined, "Department", _selectedDepartment.toUpperCase()),
 
                               const SizedBox(height: 16),
                               _buildSectionTitle("RESIDENCE"),
