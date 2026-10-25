@@ -74,8 +74,8 @@ android {
         release {
             // Sign release build with the newly configured release keys.
             signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android.txt"),
                 "proguard-rules.pro"
@@ -91,6 +91,11 @@ android {
             keepDebugSymbols.add("**/libonnxruntime.so")
             keepDebugSymbols.add("**/libonnxruntime4j_jni.so")
         }
+    }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 

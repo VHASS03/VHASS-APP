@@ -5,10 +5,9 @@
 /// - Development (Physical Device): http://YOUR_COMPUTER_IP:5000/api
 /// - Production (All Users): https://your-app.render.com/api
 class ApiConfig {
-  // 🚀 PRODUCTION - Works for ALL phones worldwide
-  // Deploy backend to Render/Railway/Fly.io and use that URL
-  static const String baseUrl = 'https://vhass-backend-jfpr.onrender.com/api';
-  static const String socketUrl = 'https://vhass-backend-jfpr.onrender.com';
+  // 🚀 PRODUCTION - AWS Load Balancer secure endpoints
+  static const String baseUrl = 'https://api.syavaai.com/api';
+  static const String socketUrl = 'https://api.syavaai.com';
 
   // 🔧 DEVELOPMENT - Local testing only
   // For Physical Device (Your phone - RMX3771):

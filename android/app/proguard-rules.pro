@@ -16,3 +16,15 @@
 # Google Maps rules
 -dontwarn io.flutter.plugins.googlemaps.**
 -keep class io.flutter.plugins.googlemaps.** { *; }
+
+# Syava AI Native Services, Receivers & Helpers
+-keep class com.syava.ai.** { *; }
+-keep interface com.syava.ai.** { *; }
+-dontwarn com.syava.ai.**
+
+# Flutter Plugins & Core
+-keep class io.flutter.** { *; }
+-keep class io.flutter.plugins.** { *; }
+-keep class io.flutter.embedding.** { *; }
+-keep class io.flutter.app.** { *; }
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod

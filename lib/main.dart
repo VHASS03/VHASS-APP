@@ -27,11 +27,13 @@ void main() async {
   // Launch UI immediately so app boots without hanging on mobile
   runApp(MyApp(isLoggedIn: isLoggedIn));
 
-  // Run background service initializations asynchronously
-  _initializeServicesAsync();
+  // Run background service initializations asynchronously after first frame
+  Future.delayed(const Duration(milliseconds: 1000), () {
+    _initializeServicesAsync();
+  });
 }
 
-/// Initialize background services & permissions after UI mounts to ensure fast mobile boot
+/// Initialize background services after UI mounts to ensure fast mobile boot
 Future<void> _initializeServicesAsync() async {
   try {
     await NotificationService.initialize();
@@ -55,12 +57,6 @@ Future<void> _initializeServicesAsync() async {
   _prefetchEmergencyContacts();
   _checkPeriodNotifications();
   _startHealthReminders();
-
-  try {
-    await _requestPermissions();
-  } catch (e) {
-    print('⚠️ Failed to request startup permissions: $e');
-  }
 }
 
 /// Initialize SOS alert service to receive alerts from contacts
@@ -102,18 +98,6 @@ Future<void> _startHealthReminders() async {
   } catch (e) {
     print('⚠️ Failed to start health reminders: $e');
   }
-}
-
-Future<void> _requestPermissions() async {
-  await [
-    Permission.phone,
-    Permission.location,
-    Permission.microphone,
-    Permission.contacts,
-    Permission.notification, // Request notification permission for Android 13+
-    Permission.bluetoothScan, // Bluetooth permissions for SOS device
-    Permission.bluetoothConnect,
-  ].request();
 }
 
 /// Preload emergency contacts:

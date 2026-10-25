@@ -73,7 +73,7 @@ class WakeWordDetectorService : Service() {
     
     // Decision State Variables
     private var lastTriggerTime = 0L
-    private val TRIGGER_DEBOUNCE_MS = 60000L
+    private val TRIGGER_DEBOUNCE_MS = 15000L
     
     // Auth & Endpoints
     private var authToken: String? = null
@@ -95,7 +95,7 @@ class WakeWordDetectorService : Service() {
             val model = WakeWordModel(
                 name = "help_me_out",
                 modelPath = "help_me_out.onnx", // Must be placed in android/app/src/main/assets/
-                threshold = 0.15f
+                threshold = 0.06f
             )
             wakeWordEngine = WakeWordEngine(
                 context = this,
@@ -206,8 +206,8 @@ class WakeWordDetectorService : Service() {
                 Log.e(TAG, "❌ Voice SOS trigger exception: ${e.message}")
                 triggerHeadlessSOS(null)
             } finally {
-                // Reset monitoring state after 30 seconds
-                delay(30000)
+                // Reset monitoring state after 15 seconds
+                delay(15000)
                 currentState = State.MONITORING
                 updateNotification()
                 
