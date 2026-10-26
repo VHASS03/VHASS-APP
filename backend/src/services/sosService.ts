@@ -106,8 +106,10 @@ class SOSService {
       isActive: true,
     }).sort({ priority: 1 });
 
+    // An SOS without contacts is still recorded and escalated to emergency services,
+    // rather than rejected — a person in danger must never get "no contacts" as an error.
     if (contacts.length === 0) {
-      throw new Error('No emergency contacts configured');
+      console.warn(`⚠️ SOS triggered by user ${userId} with no emergency contacts`);
     }
 
     // Create SOS record
@@ -183,12 +185,33 @@ class SOSService {
 
     console.log(`🚨 CONFERENCE MODE: Generated instructions for ALL ${contacts.length} contacts`);
 
-    // No escalation queue needed - all contacts are called simultaneously
-    // The escalation is now handled by the app calling everyone at once
-
     // Update status to CONTACTING
     sos.status = SOSStatus.CONTACTING;
     await sos.save();
+
+    // Safety net: all contacts are contacted at once, so the only escalation left is
+    // emergency services. If no contact has responded (RESPONDER_ASSIGNED) or the SOS
+    // hasn't ended by the time this job runs, escalate() moves it to emergency.
+    // contactIndex = last contact makes escalate() go straight to escalateToEmergency.
+    const escalationDelay = parseInt(process.env.SOS_ESCALATION_DELAY_SECONDS || '30') * 1000;
+    const lastContactIndex = contacts.length - 1;
+    try {
+      await escalationQueue.add(
+        `escalate-${sos._id}`,
+        {
+          sosId: sos._id.toString(),
+          userId,
+          contactIndex: lastContactIndex,
+        },
+        {
+          delay: escalationDelay,
+          jobId: `escalate-${sos._id}-${lastContactIndex}`,
+        }
+      );
+    } catch (queueError: any) {
+      // Never fail the SOS itself because the queue is unavailable
+      console.error(`❌ Failed to schedule escalation for SOS ${sos._id}:`, queueError.message);
+    }
 
     return {
       sosId: sos._id.toString(),
@@ -272,8 +295,10 @@ class SOSService {
   async escalate(sosId: string, currentContactIndex: number): Promise<void> {
     const sos = await SOS.findById(sosId).populate('userId');
 
-    if (!sos || sos.status === SOSStatus.RESOLVED) {
-      return; // SOS already resolved
+    // Only escalate while still waiting for help. A cancelled/resolved SOS, or one a
+    // contact has already responded to (RESPONDER_ASSIGNED), must not escalate.
+    if (!sos || ![SOSStatus.TRIGGERED, SOSStatus.CONTACTING].includes(sos.status)) {
+      return;
     }
 
     const contacts = await EmergencyContact.find({
@@ -617,7 +642,7 @@ class SOSService {
       validPin = pin === user.sosPIN;
     } else {
       // Use device PIN (last 4 digits of phone)
-      const lastFourDigits = user.phoneNumber.slice(-4);
+      const lastFourDigits = user.phone.slice(-4);
       validPin = pin === lastFourDigits;
     }
 

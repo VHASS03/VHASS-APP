@@ -13,6 +13,42 @@ import '../../core/services/live_location_service.dart';
 import '../../core/utils/phone_formatter.dart';
 import '../sos_map/sos_map_screen.dart';
 
+/// Whether the SOS actually reached the server — drives what the screen claims.
+enum _SosDeliveryState {
+  sending(
+    headline: 'SENDING SOS…',
+    subtitle: 'Contacting the server',
+    cardTitle: 'Sending your SOS',
+    cardBody: 'Hold on — this takes a few seconds.',
+  ),
+  active(
+    headline: 'EMERGENCY ACTIVE',
+    subtitle: 'Contacts being notified',
+    cardTitle: 'Help is being notified',
+    cardBody: 'Stay calm. We\'re reaching your contacts.',
+  ),
+  serverUnreachable(
+    headline: 'SOS NOT DELIVERED',
+    subtitle: 'Server unreachable — contacting directly',
+    cardTitle: 'Could not reach the server',
+    cardBody:
+        'We are calling and texting your contacts directly from this phone. '
+        'Call 112 if you are in danger.',
+  );
+
+  const _SosDeliveryState({
+    required this.headline,
+    required this.subtitle,
+    required this.cardTitle,
+    required this.cardBody,
+  });
+
+  final String headline;
+  final String subtitle;
+  final String cardTitle;
+  final String cardBody;
+}
+
 class EmergencyActiveScreen extends StatefulWidget {
   const EmergencyActiveScreen({super.key});
 
@@ -38,6 +74,10 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
 
   // --- SOS DATA ---
   String? _sosId;
+
+  // What the header/status card tells the user. Must reflect reality:
+  // never claim contacts are being notified when the SOS did not go out.
+  _SosDeliveryState _deliveryState = _SosDeliveryState.sending;
 
   @override
   void initState() {
@@ -78,10 +118,7 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
         // Also update cache with fresh data
         await ContactsService.preloadContacts();
 
-        // Trigger SOS and call contacts
-        if (_contacts.isNotEmpty) {
-          await _triggerSOSAndCallContacts();
-        } else {
+        if (_contacts.isEmpty) {
           print('⚠️ No active emergency contacts found!');
         }
       } else {
@@ -92,38 +129,59 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
         if (cachedResponse.success && cachedResponse.data != null) {
           final activeContacts = cachedResponse.data!.where((c) => c.isActive).toList();
           activeContacts.sort((a, b) => a.priority.compareTo(b.priority));
-          setState(() {
-            _contacts = activeContacts;
-          });
-          if (_contacts.isNotEmpty) {
-            await _triggerSOSAndCallContacts();
+          if (mounted) {
+            setState(() {
+              _contacts = activeContacts;
+            });
           }
         }
       }
     } catch (e) {
-      print('❌ Error initializing emergency: $e');
+      print('❌ Error loading contacts for emergency: $e');
     }
+
+    // Always raise the SOS on the server, even with no contacts:
+    // the server still records it and escalates.
+    await _triggerSOSAndCallContacts();
   }
 
-  /// Trigger SOS and start calling contacts
-  Future<void> _triggerSOSAndCallContacts() async {
+  /// Open the live map. Its "End SOS" button pops with `true`, and the
+  /// authenticated cancel flow then runs here.
+  void _openMap(String sosId) {
+    Navigator.of(context)
+        .push<bool>(
+          MaterialPageRoute(builder: (context) => SOSMapScreen(sosId: sosId)),
+        )
+        .then((endRequested) {
+      if (endRequested == true && mounted) {
+        _requestPINToCancel(context);
+      }
+    });
+  }
+
+  /// Retry sending the SOS to the server after a failed attempt
+  Future<void> _retrySOS() async {
+    setState(() => _deliveryState = _SosDeliveryState.sending);
+    await _triggerSOSAndCallContacts(isRetry: true);
+  }
+
+  /// Trigger SOS and start calling contacts.
+  /// Contacts are called/texted from the device even if the server is unreachable.
+  Future<void> _triggerSOSAndCallContacts({bool isRetry = false}) async {
     try {
       print('📞 Triggering SOS...');
 
       // Get current user name for alert
       final userName = await StorageService.getUserName() ?? 'User';
 
-      // Get current location for alert
-      Position? currentPosition;
-      try {
-        currentPosition = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.best,
-        );
-      } catch (e) {
-        print('⚠️ Could not get current position: $e');
-      }
+      // Bounded location lookup — an SOS must never wait indefinitely for GPS
+      final currentPosition = await SOSService.getQuickPosition();
 
-      final sosResponse = await SOSService.triggerSOS();
+      // This screen calls and texts contacts itself, so the service must not repeat it
+      final sosResponse = await SOSService.triggerSOS(
+        position: currentPosition,
+        executeDeviceActions: false,
+      );
 
       if (sosResponse.success && sosResponse.data != null) {
         final data = sosResponse.data as Map<String, dynamic>;
@@ -131,8 +189,10 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
 
         print('✅ SOS triggered successfully with ID: $sosId');
 
+        if (!mounted) return;
         setState(() {
           _sosId = sosId;
+          _deliveryState = _SosDeliveryState.active;
         });
 
         // START LIVE LOCATION TRACKING IMMEDIATELY
@@ -161,15 +221,13 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
 
         // Open real-time location map
         if (sosId != null && mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => SOSMapScreen(sosId: sosId)),
-          );
+          _openMap(sosId);
         }
 
         // Call contacts one after another (no conference, no delay)
-        if (_contacts.isNotEmpty) {
+        if (_contacts.isNotEmpty && !isRetry) {
           _callAllContactsOneAfterAnother();
-          _sendSMSToAllContacts(sosId);
+          _sendSMSToAllContacts(sosId, position: currentPosition);
         }
       } else if (sosResponse.message?.contains('already active') == true) {
         // SOS already active - still make calls to contacts
@@ -185,8 +243,10 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
         // Fallback to SOSService if not in response
         activeSosId ??= SOSService.getCurrentSosId();
 
+        if (!mounted) return;
         setState(() {
           _sosId = activeSosId;
+          _deliveryState = _SosDeliveryState.active;
         });
 
         // START LIVE LOCATION TRACKING for existing SOS
@@ -213,16 +273,42 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
         }
 
         // Call contacts one after another (no conference, no delay)
-        if (_contacts.isNotEmpty) {
+        if (_contacts.isNotEmpty && !isRetry) {
           _callAllContactsOneAfterAnother();
-          _sendSMSToAllContacts(activeSosId);
+          _sendSMSToAllContacts(activeSosId, position: currentPosition);
         }
       } else {
         print('❌ Failed to trigger SOS: ${sosResponse.message}');
+        await _handleServerUnreachable(userName, currentPosition, isRetry);
       }
     } catch (e) {
       print('❌ Error triggering SOS: $e');
+      await _handleServerUnreachable(
+        await StorageService.getUserName() ?? 'User',
+        null,
+        isRetry,
+      );
     }
+  }
+
+  /// The server could not be reached: say so honestly and still reach contacts
+  /// directly from the phone (calls/SMS do not need the server).
+  Future<void> _handleServerUnreachable(
+    String userName,
+    Position? position,
+    bool isRetry,
+  ) async {
+    if (!mounted) return;
+    setState(() => _deliveryState = _SosDeliveryState.serverUnreachable);
+
+    // Contacts were already called/texted on the first attempt
+    if (isRetry || _contacts.isEmpty) return;
+
+    if (position != null) {
+      _sendSOSAlertsToContacts(userName, position.latitude, position.longitude);
+    }
+    _callAllContactsOneAfterAnother();
+    _sendSMSToAllContacts(null, position: position);
   }
 
   /// Send SOS alert notifications to all emergency contacts concurrently
@@ -282,7 +368,7 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
   }
 
   /// Send SMS to all contacts concurrently WITH LIVE TRACKING LINK
-  Future<void> _sendSMSToAllContacts(String? sosId) async {
+  Future<void> _sendSMSToAllContacts(String? sosId, {Position? position}) async {
     print(
       '📱 Sending automatic SMS with LIVE TRACKING LINK to all contacts...',
     );
@@ -294,15 +380,8 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
       return;
     }
 
-    // Get current location once for all SMS
-    Position? currentPosition;
-    try {
-      currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
-      );
-    } catch (e) {
-      print('⚠️ Could not get location for SMS: $e');
-    }
+    // Location for the SMS: reuse the one already fetched, else a bounded lookup
+    final currentPosition = position ?? await SOSService.getQuickPosition();
 
     // Create LIVE TRACKING LINK if we have sosId
     final liveTrackingLink = sosId != null 
@@ -399,34 +478,7 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
 
       if (!canCheckBiometrics && !isDeviceSupported) {
         // Fallback: Show warning dialog if device doesn't support authentication
-        if (mounted) {
-          final confirm = await showDialog<bool>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              title: const Text('⚠️ Warning'),
-              content: const Text(
-                'Your device does not support biometric authentication.\n\n'
-                'Are you sure you want to cancel the emergency?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('No, Keep Active'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Yes, Cancel Emergency'),
-                ),
-              ],
-            ),
-          );
-
-          if (confirm == true) {
-            await _cancelEmergency();
-          }
-        }
+        await _confirmCancelWithoutAuth();
         return;
       }
 
@@ -463,6 +515,23 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
           );
         }
       }
+    } on PlatformException catch (e) {
+      // No screen lock / nothing enrolled: authentication can never succeed, so
+      // without this fallback the user could never cancel the SOS
+      if (const ['NotAvailable', 'NotEnrolled', 'PasscodeNotSet'].contains(e.code)) {
+        print('⚠️ Device authentication unavailable (${e.code}) - asking for confirmation');
+        await _confirmCancelWithoutAuth();
+        return;
+      }
+      print('❌ Authentication error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Authentication error: ${e.message ?? e.code}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       print('❌ Authentication error: $e');
       if (mounted) {
@@ -476,13 +545,65 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
     }
   }
 
+  /// Confirmation used when the device has no PIN/biometric to verify with
+  Future<void> _confirmCancelWithoutAuth() async {
+    if (!mounted) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('⚠️ Warning'),
+        content: const Text(
+          'This device has no screen lock or biometrics set up.\n\n'
+          'Are you sure you want to cancel the emergency?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('No, Keep Active'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Yes, Cancel Emergency'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _cancelEmergency();
+    }
+  }
+
   /// Cancel the emergency after successful authentication
   Future<void> _cancelEmergency() async {
     try {
-      // Stop live location tracking
+      // The SOS never reached the server: nothing to end there
+      if (_sosId == null && SOSService.getCurrentSosId() == null) {
+        await LiveLocationService.instance.stopTracking();
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+
+      final response = await SOSService.endSOS(reason: 'CANCELLED');
+      if (!response.success) {
+        // Keep the screen (and tracking) up so the user knows it is still active
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Could not end SOS: ${response.message ?? 'server error'}. It is still active.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Stop live location tracking only once the server confirmed
       await LiveLocationService.instance.stopTracking();
-      
-      await SOSService.endSOS(reason: 'CANCELLED');
       if (mounted) {
         Navigator.pop(context);
       }
@@ -534,21 +655,21 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
               children: [
                 const Icon(Icons.shield, color: Colors.white, size: 28),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'EMERGENCY ACTIVE',
-                        style: TextStyle(
+                        _deliveryState.headline,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
                       ),
                       Text(
-                        'Contacts being notified',
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                        _deliveryState.subtitle,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
                   ),
@@ -587,11 +708,7 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
                   onTap: () {
                     final sosId = _sosId ?? SOSService.getCurrentSosId();
                     if (sosId != null) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => SOSMapScreen(sosId: sosId),
-                        ),
-                      );
+                      _openMap(sosId);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -642,21 +759,26 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Live location tracking active',
+                  _deliveryState == _SosDeliveryState.active
+                      ? 'Live location tracking active'
+                      : 'Live tracking starts once the SOS reaches the server',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: theme.textTheme.bodyLarge?.color,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Updates every 5 seconds',
-                  style: TextStyle(
-                    color: isDark ? Colors.grey : Colors.grey[600],
-                    fontSize: 14,
+                if (_deliveryState == _SosDeliveryState.active) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Updates every 5 seconds',
+                    style: TextStyle(
+                      color: isDark ? Colors.grey : Colors.grey[600],
+                      fontSize: 14,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -682,7 +804,8 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
                   child: Column(
                     children: [
                       Text(
-                        'Help is being notified',
+                        _deliveryState.cardTitle,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: theme.textTheme.bodyLarge?.color,
                           fontSize: 18,
@@ -691,12 +814,25 @@ class _EmergencyActiveScreenState extends State<EmergencyActiveScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Stay calm. We\'re reaching your contacts.',
+                        _contacts.isEmpty &&
+                                _deliveryState != _SosDeliveryState.sending
+                            ? 'You have no emergency contacts. Call 112 if you are in danger.'
+                            : _deliveryState.cardBody,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: isDark ? Colors.grey : Colors.grey[700],
                           fontSize: 14,
                         ),
                       ),
+                      if (_deliveryState ==
+                          _SosDeliveryState.serverUnreachable) ...[
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: _retrySOS,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry sending SOS'),
+                        ),
+                      ],
                     ],
                   ),
                 ),

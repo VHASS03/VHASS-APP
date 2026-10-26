@@ -1,7 +1,18 @@
+// Load environment variables FIRST (the worker runs as its own process, not via server.ts)
+import '../config/env';
+
 import { Worker, Job } from 'bullmq';
+import database from '../config/database';
 import sosService from '../services/sosService';
 import { redisConnection } from '../config/queues';
 import EmergencyContact from '../models/EmergencyContact';
+
+// The worker queries MongoDB, so it needs its own connection. Without it every
+// job fails with "buffering timed out". Mongoose buffers queries until connected.
+database.connect().catch((error) => {
+  console.error('❌ Escalation Worker could not connect to MongoDB:', error);
+  process.exit(1);
+});
 
 /**
  * Escalation Worker
@@ -51,7 +62,8 @@ const escalationWorker = new Worker<EscalationJobData>(
       // Escalate to next contact
       await sosService.escalate(sosId, contactIndex);
 
-      console.log(`[Escalation Worker] Successfully escalated SOS ${sosId} to contact ${contactIndex + 1}`);
+      // escalate() moves to the next contact, or to emergency services after the last one
+      console.log(`[Escalation Worker] Escalation step done for SOS ${sosId} (from contact index ${contactIndex})`);
     } catch (error) {
       console.error(`[Escalation Worker] Error processing escalation for SOS ${sosId}:`, error);
       throw error; // BullMQ will retry

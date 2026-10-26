@@ -17,6 +17,27 @@ class ApiService {
     };
   }
 
+  /// Endpoints where 401 means "wrong credentials" (e.g. wrong OTP), not an expired session
+  static const _credentialEndpoints = [
+    ApiConfig.authSendOtp,
+    ApiConfig.authVerifyOtp,
+    '/auth/signup',
+  ];
+
+  /// A 401 only means the session expired if the request was sent with a token
+  /// and isn't a login/OTP call. Otherwise the caller shows the server's message.
+  static Future<void> _handleUnauthorized(
+    String endpoint,
+    Map<String, String> headers,
+  ) async {
+    final sentWithToken = headers.containsKey('Authorization');
+    final isCredentialCall =
+        _credentialEndpoints.any((e) => endpoint.startsWith(e));
+    if (sentWithToken && !isCredentialCall) {
+      await SessionService.handleExpired();
+    }
+  }
+
   /// Make GET request
   static Future<ApiResponse<T>> get<T>(
     String endpoint, {
@@ -34,7 +55,7 @@ class ApiService {
       print('🟡 [GET] Response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 401 && handleUnauthorized) {
-        await SessionService.handleExpired();
+        await _handleUnauthorized(endpoint, headers);
       }
 
       final jsonData = json.decode(response.body);
@@ -80,7 +101,7 @@ class ApiService {
       print('🟡 [POST] Response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 401) {
-        await SessionService.handleExpired();
+        await _handleUnauthorized(endpoint, headers);
       }
 
       final jsonData = json.decode(response.body);
@@ -115,7 +136,7 @@ class ApiService {
       );
 
       if (response.statusCode == 401) {
-        await SessionService.handleExpired();
+        await _handleUnauthorized(endpoint, headers);
       }
 
       final jsonData = json.decode(response.body);
@@ -145,7 +166,7 @@ class ApiService {
       final response = await http.delete(url, headers: headers);
 
       if (response.statusCode == 401) {
-        await SessionService.handleExpired();
+        await _handleUnauthorized(endpoint, headers);
       }
 
       final jsonData = json.decode(response.body);

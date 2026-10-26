@@ -105,16 +105,9 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
           deviceId: requestDeviceId,
           message: 'Ready to receive OTP on this device' 
         });
-      } else {
-        // Fallback to phone room if no device ID provided
-        const otpRoom = `otp:${phone}`;
-        socket.join(otpRoom);
-        console.log(`[Socket] ${socket.id} registered for OTP on phone: ${phone}`);
-        socket.emit('auth:otp-room-joined', { 
-          phone, 
-          message: 'Ready to receive OTP' 
-        });
       }
+      // No phone-number room: an unauthenticated socket could otherwise
+      // subscribe to OTPs for any phone number.
     });
 
     // If socket is public (no JWT), stop here. They can only receive OTP.

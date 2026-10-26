@@ -13,18 +13,46 @@ class SOSService {
   static String? _currentSosId;
 
   /// Trigger SOS
-  static Future<ApiResponse<Map<String, dynamic>>> triggerSOS() async {
+  /// Best-effort location that never holds up an SOS for long.
+  /// Uses a recent last-known fix immediately; otherwise waits at most
+  /// [timeout] for a fresh fix; otherwise falls back to any last-known fix.
+  static Future<Position?> getQuickPosition({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    Position? lastKnown;
     try {
-      // Get current location
-      Position? position;
-      try {
-        position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-      } catch (e) {
-        print('Location error: $e');
-        // Continue without location
+      lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null &&
+          DateTime.now().difference(lastKnown.timestamp) <
+              const Duration(minutes: 2)) {
+        return lastKnown;
       }
+    } catch (e) {
+      print('Last known location error: $e');
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: timeout,
+      );
+    } catch (e) {
+      print('Location error (falling back to last known): $e');
+      return lastKnown;
+    }
+  }
+
+  /// Trigger SOS on the server.
+  /// [position]: location to send; looked up (bounded) when not given.
+  /// [executeDeviceActions]: run the server's CALL/SMS instructions here. Callers that
+  /// call and text contacts themselves (the emergency screen) pass false to avoid duplicates.
+  static Future<ApiResponse<Map<String, dynamic>>> triggerSOS({
+    Position? position,
+    bool executeDeviceActions = true,
+  }) async {
+    try {
+      // Never block the SOS on GPS — send whatever location is available quickly
+      position ??= await getQuickPosition();
 
       final response = await ApiService.post<Map<String, dynamic>>(
         '/sos/trigger',
@@ -41,7 +69,7 @@ class SOSService {
         _currentSosId = data['sosId'] as String?;
 
         // Execute device instructions
-        if (data['instructions'] != null) {
+        if (executeDeviceActions && data['instructions'] != null) {
           final instructions = (data['instructions'] as List)
               .map((i) => DeviceInstruction.fromJson(i))
               .toList();
@@ -236,14 +264,8 @@ class SOSService {
     }
 
     try {
-      Position? position;
-      try {
-        position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-      } catch (e) {
-        // Continue without location
-      }
+      // Bounded — ending an SOS must not hang waiting for GPS
+      final position = await getQuickPosition(timeout: const Duration(seconds: 3));
 
       final response = await ApiService.post('/sos/end', {
         'sosId': _currentSosId,

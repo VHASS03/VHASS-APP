@@ -46,6 +46,20 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>com.google.ios.maps.API_KEY</key>
-	<string>AIzaSyABObu0QnKEykNF72Zqt_AdcG-wCgN4UQ4</string>
+	<string>$(MAPS_API_KEY)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Syava AI listens for your voice SOS command so you can call for help hands-free.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition detects your emergency phrase to trigger an SOS.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is shared with your emergency contacts and campus security during an SOS.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Your location keeps updating for your emergency contacts during an active SOS, even when the app is in the background.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Bluetooth connects your Syava safety device so its button can trigger an SOS.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Pick emergency contacts from your address book.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID confirms it is you before cancelling an SOS.</string>
 </dict>
 </plist>
