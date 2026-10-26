@@ -6,7 +6,7 @@ import Device from '../models/Device';
 import EmergencyContact from '../models/EmergencyContact';
 import { DeviceType } from '../types';
 import redisClient from '../config/redis';
-import { generateOTP, validateOTPFormat } from '../utils/otp';
+import { generateOTP, validateOTPFormat, shouldExposeOtp } from '../utils/otp';
 import { sendSms } from '../utils/sms';
 import { generateToken } from '../utils/jwt';
 import Log from '../models/Log';
@@ -68,25 +68,6 @@ router.post(
         occupation,
         emergencyContacts,
       } = req.body;
-
-      // Log incoming data for debugging
-      console.log('📥 Signup request data:', {
-        name,
-        phone,
-        admissionNumber,
-        email,
-        course,
-        department,
-        year,
-        age,
-        gender,
-        residenceType,
-        roomNumber,
-        guardianName,
-        guardianPhone,
-        emergencyRelationship,
-        emergencyContactsCount: emergencyContacts?.length || 0,
-      });
 
       // Check database connection with explicit verification
       if (mongoose.connection.readyState !== 1) {
@@ -172,7 +153,6 @@ router.post(
           userData.occupation = occupation.trim();
         }
 
-        console.log('📝 Creating user with data:', userData);
         console.log('📝 MongoDB connection state:', mongoose.connection.readyState);
         console.log('📝 MongoDB connection name:', mongoose.connection.name);
         
@@ -188,7 +168,7 @@ router.post(
         if (!savedUser) {
           throw new Error('User was not saved to database - verification query returned null');
         }
-        console.log(`✅ Verified user exists in DB: ${savedUser._id}, phone: ${savedUser.phone}, name: ${savedUser.name}`);
+        console.log(`✅ Verified user exists in DB: ${savedUser._id}`);
       } catch (createError: any) {
         console.error('❌ User creation failed:', createError);
         console.error('❌ Error name:', createError.name);
@@ -260,14 +240,13 @@ router.post(
       const otpMessage = `Your VHASS verification code is: ${otp}. Valid for ${expirySeconds / 60} minutes.`;
       const smsResult = await sendSms(phone, otpMessage);
 
-      // IMPORTANT: Still return OTP for app fallback (dev/testing)
-      console.log(`📱 Signup OTP for ${phone}: ${otp}`);
       res.status(201).json({
         success: true,
         message: 'User created. OTP sent via SMS and real-time Socket.IO',
         userId: user._id,
         data: {
-          otp, // Return OTP for app fallback (dev/testing)
+          // Only exposed when allowed (see shouldExposeOtp) — app uses it for device-SMS fallback
+          otp: shouldExposeOtp() ? otp : undefined,
           smsSent: smsResult.sent,
           smsProvider: smsResult.provider,
         },
@@ -317,6 +296,16 @@ router.post(
 
       const { phone, deviceId } = req.body;
 
+      // Rate limit: 5 OTP requests per phone and 20 per IP, per 15 minutes
+      const [phoneHits, ipHits] = await Promise.all([
+        redisClient.hitRateLimit(`send-otp:phone:${phone}`, 15 * 60),
+        redisClient.hitRateLimit(`send-otp:ip:${req.ip}`, 15 * 60),
+      ]);
+      if (phoneHits > 5 || ipHits > 20) {
+        res.status(429).json({ success: false, message: 'Too many OTP requests. Please try again later.' });
+        return;
+      }
+
       // Generate OTP
       const otp = generateOTP(6);
       const expirySeconds = parseInt(process.env.OTP_EXPIRY_SECONDS || '600');
@@ -335,7 +324,9 @@ router.post(
       const io = req.app.get('io');
       let socketIOSuccessful = false;
       
-      if (io && deviceId) {
+      // Socket rooms can be joined without authentication, so this is gated like the response OTP.
+      // The phone-number room fallback was removed: anyone could join `otp:<phone>` for any phone.
+      if (io && deviceId && shouldExposeOtp()) {
         // Send to specific device only to prevent multiple sends on shared numbers
         const deviceRoom = `device:${deviceId}`;
         io.to(deviceRoom).emit('auth:otp-received', {
@@ -344,39 +335,21 @@ router.post(
           expiresIn: expirySeconds,
           message: `Your VHASS verification code is: ${otp}. Valid for ${expirySeconds / 60} minutes.`,
         });
-        console.log(`📱 OTP sent via Socket.IO to device ${deviceId}: ${otp}`);
         socketIOSuccessful = true;
-      } else if (io && !deviceId) {
-        // Fallback: Send to phone room if no deviceId provided
-        const otpRoom = `otp:${phone}`;
-        io.to(otpRoom).emit('auth:otp-received', {
-          phone,
-          otp,
-          expiresIn: expirySeconds,
-          message: `Your VHASS verification code is: ${otp}. Valid for ${expirySeconds / 60} minutes.`,
-        });
-        console.log(`📱 OTP sent via Socket.IO to phone ${phone}: ${otp}`);
-        socketIOSuccessful = true;
-      } else {
-        console.warn('⚠️  Socket.IO not available - OTP will be sent via SMS fallback only');
       }
 
       // Attempt SMS delivery from backend (e.g., Twilio)
       const otpMessage = `Your VHASS verification code is: ${otp}. Valid for ${expirySeconds / 60} minutes.`;
       const smsResult = await sendSms(phone, otpMessage);
 
-      // Console log for server visibility
-      console.log(`📱 OTP for ${phone}: ${otp}`);
-
-      // IMPORTANT: Always return OTP for app to send via SMS
-      // This ensures OTP delivery even if Socket.IO connection fails
       res.json({
         success: true,
-        message: socketIOSuccessful 
+        message: socketIOSuccessful
           ? 'OTP sent successfully via Socket.IO and SMS fallback'
           : 'OTP sent via SMS (Socket.IO unavailable)',
         data: {
-          otp, // Return OTP for app fallback (dev/testing)
+          // Only exposed when allowed (see shouldExposeOtp) — app uses it for device-SMS fallback
+          otp: shouldExposeOtp() ? otp : undefined,
           smsSent: smsResult.sent,
           smsProvider: smsResult.provider,
         },

@@ -176,17 +176,47 @@ class SharedRedisClient {
   async storeOTP(phone: string, otp: string, expirySeconds: number = 600): Promise<void> {
     const key = `otp:${phone}`;
     await this.getClient().setex(key, expirySeconds, otp);
+    await this.getClient().del(`otp-attempts:${phone}`);
   }
 
+  /**
+   * Verify OTP. After MAX_OTP_ATTEMPTS wrong guesses the OTP is destroyed,
+   * so a 6-digit code cannot be brute-forced within its expiry window.
+   */
   async verifyOTP(phone: string, otp: string): Promise<boolean> {
+    const MAX_OTP_ATTEMPTS = 5;
     const key = `otp:${phone}`;
+    const attemptsKey = `otp-attempts:${phone}`;
     const storedOTP = await this.getClient().get(key);
 
+    if (!storedOTP) return false;
+
     if (storedOTP === otp) {
-      await this.getClient().del(key);
+      await this.getClient().del(key, attemptsKey);
       return true;
     }
+
+    const attempts = await this.getClient().incr(attemptsKey);
+    if (attempts === 1) {
+      const ttl = await this.getClient().ttl(key);
+      await this.getClient().expire(attemptsKey, ttl > 0 ? ttl : 600);
+    }
+    if (attempts >= MAX_OTP_ATTEMPTS) {
+      await this.getClient().del(key, attemptsKey);
+    }
     return false;
+  }
+
+  /**
+   * Fixed-window counter. Returns the hit count for `key` within the current window.
+   */
+  async hitRateLimit(key: string, windowSeconds: number): Promise<number> {
+    const fullKey = `ratelimit:${key}`;
+    const count = await this.getClient().incr(fullKey);
+    if (count === 1) {
+      await this.getClient().expire(fullKey, windowSeconds);
+    }
+    return count;
   }
 
   // ===== SOS State Methods =====

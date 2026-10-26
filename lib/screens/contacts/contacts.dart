@@ -220,7 +220,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
   void _addContact() {
     showDialog(
       context: context,
-      builder: (context) => _AddContactDialog(
+      builder: (dialogContext) => _AddContactDialog(
+        takenPriorities: _contacts.map((c) => c.priority).toSet(),
+        // Returns null on success, or an error message the dialog shows inline
         onAdd: (name, phone, countryCode, priority, relationship) async {
           final response = await ContactsService.addContact(
             name: name,
@@ -228,7 +230,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
             priority: priority,
             countryCode: countryCode,
           );
-          if (response.success && response.data != null) {
+          if (!response.success || response.data == null) {
+            return response.message ?? 'Failed to add contact';
+          }
+          // Use this screen's context — the dialog's context is gone once it closes
+          if (mounted) {
             setState(() {
               _contacts.add(response.data!);
               _contacts.sort((a, b) => a.priority.compareTo(b.priority));
@@ -236,13 +242,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Contact added successfully')),
             );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(response.message ?? 'Failed to add contact'),
-              ),
-            );
           }
+          return null;
         },
       ),
     );
@@ -527,9 +528,13 @@ class _ContactsScreenState extends State<ContactsScreen> {
 }
 
 class _AddContactDialog extends StatefulWidget {
-  final Function(String name, String phone, String countryCode, int priority, String relationship) onAdd;
+  /// Saves the contact; resolves to null on success or an error message on failure.
+  final Future<String?> Function(String name, String phone, String countryCode, int priority, String relationship) onAdd;
 
-  const _AddContactDialog({required this.onAdd});
+  /// Priorities already used by existing contacts (can't be chosen again)
+  final Set<int> takenPriorities;
+
+  const _AddContactDialog({required this.onAdd, this.takenPriorities = const {}});
 
   @override
   State<_AddContactDialog> createState() => _AddContactDialogState();
@@ -542,6 +547,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   String _selectedCountry = 'IN';
   String _selectedRelationship = 'Parent';
   bool _isLoading = false;
+  String? _submitError;
 
   final List<String> _relationshipOptions = [
     'Parent',
@@ -557,6 +563,11 @@ class _AddContactDialogState extends State<_AddContactDialog> {
     super.initState();
     _nameController = TextEditingController();
     _phoneController = TextEditingController();
+    // Default to the first free priority instead of one that is already taken
+    _selectedPriority = [1, 2, 3].firstWhere(
+      (p) => !widget.takenPriorities.contains(p),
+      orElse: () => 1,
+    );
     _phoneController.addListener(() {
       setState(() {});
     });
@@ -677,10 +688,21 @@ class _AddContactDialogState extends State<_AddContactDialog> {
                 labelText: 'Calling Priority',
                 prefixIcon: Icon(Icons.format_list_numbered),
               ),
-              items: const [
-                DropdownMenuItem(value: 1, child: Text('Priority 1 (First Call)')),
-                DropdownMenuItem(value: 2, child: Text('Priority 2 (Second Call)')),
-                DropdownMenuItem(value: 3, child: Text('Priority 3 (Third Call)')),
+              items: [
+                for (final (value, label) in const [
+                  (1, 'Priority 1 (First Call)'),
+                  (2, 'Priority 2 (Second Call)'),
+                  (3, 'Priority 3 (Third Call)'),
+                ])
+                  DropdownMenuItem(
+                    value: value,
+                    enabled: !widget.takenPriorities.contains(value),
+                    child: Text(
+                      widget.takenPriorities.contains(value)
+                          ? '$label — taken'
+                          : label,
+                    ),
+                  ),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -720,6 +742,15 @@ class _AddContactDialogState extends State<_AddContactDialog> {
                   ),
                 ),
               ),
+
+            if (_submitError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: Text(
+                  _submitError!,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+              ),
           ],
         ),
       ),
@@ -743,9 +774,14 @@ class _AddContactDialogState extends State<_AddContactDialog> {
                     return;
                   }
 
-                  setState(() => _isLoading = true);
+                  setState(() {
+                    _isLoading = true;
+                    _submitError = null;
+                  });
 
-                  widget.onAdd(
+                  // Wait for the server: close only on success, otherwise keep the
+                  // typed details and show why it failed
+                  final error = await widget.onAdd(
                     _nameController.text.trim(),
                     _phoneController.text.trim(),
                     _selectedCountry,
@@ -753,7 +789,15 @@ class _AddContactDialogState extends State<_AddContactDialog> {
                     _selectedRelationship,
                   );
 
-                  Navigator.pop(context);
+                  if (!context.mounted) return;
+                  if (error == null) {
+                    Navigator.pop(context);
+                  } else {
+                    setState(() {
+                      _isLoading = false;
+                      _submitError = error;
+                    });
+                  }
                 },
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.colorScheme.primary,

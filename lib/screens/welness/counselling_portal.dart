@@ -244,14 +244,18 @@ class _CounsellingPortalScreenState extends State<CounsellingPortalScreen> {
   }
 
   Widget _buildBookingWizardTab() {
-    return _BookingWizard(
-      concerns: _concerns,
-      counsellors: _wellnessService.counsellors,
-      onBooked: () {
-        setState(() {});
-        _loadAppointments();
-        DefaultTabController.of(context).animateTo(0);
-      },
+    // Builder gives a context *below* DefaultTabController (this State's own
+    // context is above it, so DefaultTabController.of(context) would throw)
+    return Builder(
+      builder: (tabContext) => _BookingWizard(
+        concerns: _concerns,
+        counsellors: _wellnessService.counsellors,
+        onBooked: () {
+          setState(() {});
+          _loadAppointments();
+          DefaultTabController.of(tabContext).animateTo(0);
+        },
+      ),
     );
   }
 
@@ -634,6 +638,7 @@ class _BookingWizardState extends State<_BookingWizard> {
       isHighPriority: _isCrisis,
     );
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Appointment request submitted successfully!"),

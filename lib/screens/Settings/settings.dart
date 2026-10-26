@@ -262,19 +262,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      // Named dialogContext so the navigation below uses this screen's context:
+      // the dialog's context is deactivated as soon as it is popped
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Logout'),
         content: const Text(
           'Are you sure you want to logout? Voice listening will be stopped and your session will end.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
 
               try {
                 // Stop voice listening before logout

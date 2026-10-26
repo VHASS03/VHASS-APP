@@ -21,7 +21,7 @@ class GroqService {
       this.isAvailable = true;
       console.log('✅ Groq AI service initialized');
     }
-    this.model = process.env.GROQ_MODEL || 'mixtral-8x7b-32768';
+    this.model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
   }
 
   /**
@@ -176,9 +176,10 @@ class GroqService {
 5. **Security Advice**: Security best practices and awareness tips
 
 Guidelines:
-- Be concise and practical in your responses
+- Be concise and practical in your responses (a few short paragraphs or a short numbered list)
+- Reply in plain text only: no Markdown, no **bold**, no tables, no headings — the app shows text as-is
 - Use clear, easy-to-understand language
-- When discussing emergencies, always emphasize calling 911 or local emergency services first
+- When discussing emergencies, always emphasize calling ${process.env.EMERGENCY_NUMBER || '112'} (India's emergency number) or local emergency services first
 - For medical emergencies, always recommend consulting healthcare professionals
 - Be empathetic and supportive in tone
 - Provide actionable advice when possible

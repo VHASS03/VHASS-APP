@@ -3,7 +3,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
-import '../../core/services/sos_service.dart';
 import '../../core/services/live_location_service.dart';
 
 /// Real-time SOS Map Screen
@@ -172,35 +171,11 @@ class _SOSMapScreenState extends State<SOSMapScreen> {
     }
   }
 
-  /// End SOS and return to home
+  /// Ask to end the SOS. This screen is only opened from the emergency screen,
+  /// which owns the authenticated cancel flow (PIN/biometric) and the server call,
+  /// so hand the request back to it instead of ending the SOS here unverified.
   Future<void> _endSOS() async {
-    try {
-      // Stop live tracking first
-      await _liveLocationService.stopTracking();
-      
-      // End SOS on backend
-      await SOSService.endSOS(reason: 'User cancelled SOS');
-      
-      if (mounted) {
-        setState(() => _isTracking = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('SOS ended successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to end SOS: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    Navigator.pop(context, true);
   }
 
   @override

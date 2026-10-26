@@ -35,7 +35,7 @@ router.get('/track/:sosId', async (req: Request, res: Response): Promise<void> =
     // Serve the live tracking HTML page
     res.setHeader('Content-Type', 'text/html');
     res.send(generateTrackingPage(
-      sosId,
+      String(sos._id), // canonical id, never the raw URL param
       userName,
       latestLocation,
       isActive,
@@ -84,15 +84,30 @@ router.get('/track/:sosId/location', async (req: Request, res: Response): Promis
 });
 
 /**
+ * Escape user-controlled text before inserting it into HTML
+ */
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Generate the live tracking HTML page
  */
 function generateTrackingPage(
   sosId: string,
-  userName: string,
+  rawUserName: string,
   location: any,
   isActive: boolean,
   startedAt: Date
 ): string {
+  // User names are user-controlled: escape for HTML; popupNameJs is a safe JS string literal
+  const userName = escapeHtml(rawUserName);
+  const popupNameJs = JSON.stringify(userName);
   const lat = location?.latitude || 0;
   const lng = location?.longitude || 0;
   const hasLocation = location !== null;
@@ -322,7 +337,7 @@ function generateTrackingPage(
         });
         
         marker = L.marker([initialLat, initialLng], { icon: emergencyIcon }).addTo(map);
-        marker.bindPopup('<b>${userName}</b><br>Emergency location').openPopup();
+        marker.bindPopup('<b>' + ${popupNameJs} + '</b><br>Emergency location').openPopup();
         
         pathCoords.push([initialLat, initialLng]);
         pathLine = L.polyline(pathCoords, { color: '#e74c3c', weight: 3 }).addTo(map);
