@@ -49,3 +49,13 @@ app.*.map.json
 /android/app/*.jks
 /android/app/*.keystore
 
+# Secrets, keys, credentials, archives & private documents
+*.pem
+*.key
+*.tar.gz
+*.env
+*.env.*
+*.xlsx
+*.pdf
+backend/.env
+

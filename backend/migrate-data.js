@@ -6,11 +6,16 @@
 
 const { MongoClient } = require('mongodb');
 
-// Source MongoDB Atlas URI
-const SOURCE_URI = 'mongodb+srv://vhass0310:Uday_123@cluster0.zndptf0.mongodb.net/vhass_db?retryWrites=true&w=majority';
+// Source MongoDB Atlas URI (set via SOURCE_MONGODB_URI environment variable)
+const SOURCE_URI = process.env.SOURCE_MONGODB_URI || process.env.MONGODB_URI;
 
-// Target AWS DocumentDB URI
-const TARGET_URI = 'mongodb://documentdb:%3C4%28idpSi%21M1pHY9AiLyC%21xfG%2966g@vhass-documentdb.c5gaissa82qn.ap-south-2.docdb.amazonaws.com:27017/vhass-documentdb?tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&authMechanism=SCRAM-SHA-1';
+// Target AWS DocumentDB URI (set via TARGET_MONGODB_URI environment variable)
+const TARGET_URI = process.env.TARGET_MONGODB_URI;
+
+if (!SOURCE_URI || !TARGET_URI) {
+  console.error('❌ Error: Both SOURCE_MONGODB_URI and TARGET_MONGODB_URI environment variables must be set.');
+  process.exit(1);
+}
 
 async function migrate() {
   console.log('🏁 Starting Database Migration...');
